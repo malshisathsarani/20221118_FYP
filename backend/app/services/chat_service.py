@@ -235,6 +235,47 @@ class ChatService:
             'dominant_recent_emotion': emotions[-1] if emotions else None
         }
 
+    def _detect_emotion_intensity(self, message: str, emotion_confidence: float) -> str:
+        """
+        Detect intensity of emotion from message text and confidence
+        Returns: 'mild', 'moderate', 'intense'
+        """
+        message_lower = message.lower()
+
+        # Intensity indicators
+        intense_indicators = [
+            'extremely', 'completely', 'totally', 'absolutely', 'unbearably',
+            'can\'t take', 'so much', 'too much', 'overwhelming', 'crushing',
+            'destroying', 'killing me', 'can\'t handle', 'breaking down',
+            'can\'t go on', 'give up', 'hopeless', 'desperate'
+        ]
+
+        moderate_indicators = [
+            'very', 'really', 'quite', 'pretty', 'significantly',
+            'struggling', 'difficult', 'hard time', 'tough', 'challenging'
+        ]
+
+        mild_indicators = [
+            'a bit', 'a little', 'kind of', 'sort of', 'somewhat',
+            'slightly', 'not great', 'not the best', 'okay', 'fine'
+        ]
+
+        # Check for intensity markers in message
+        if any(indicator in message_lower for indicator in intense_indicators):
+            return 'intense'
+        elif any(indicator in message_lower for indicator in moderate_indicators):
+            return 'moderate'
+        elif any(indicator in message_lower for indicator in mild_indicators):
+            return 'mild'
+
+        # Fall back to confidence score
+        if emotion_confidence > 0.75:
+            return 'intense'
+        elif emotion_confidence > 0.5:
+            return 'moderate'
+        else:
+            return 'mild'
+
     def _analyze_message(self, message: str) -> Dict[str, Any]:
         """
         Analyze user message to extract key information for personalization
@@ -461,6 +502,95 @@ class ChatService:
 
         return None
 
+    def _get_natural_filler(self, context: str = 'opening') -> str:
+        """
+        Get natural filler phrases to make responses sound more human
+        Context: 'opening', 'transition', 'empathy', 'agreement'
+        """
+        import random
+
+        fillers = {
+            'opening': [
+                "You know, ",
+                "I hear you - ",
+                "Honestly, ",
+                "I can really sense that ",
+                "",  # Sometimes no filler is more natural
+                ""
+            ],
+            'transition': [
+                "And you know what? ",
+                "Here's the thing - ",
+                "I think ",
+                "What I'm hearing is that ",
+                "From what you're sharing, ",
+                ""
+            ],
+            'empathy': [
+                "I really hear you. ",
+                "That makes total sense. ",
+                "I can understand why you'd feel that way. ",
+                "That's completely valid. ",
+                ""
+            ],
+            'agreement': [
+                "Absolutely. ",
+                "Yeah, ",
+                "I get that. ",
+                "For sure. ",
+                "That's real. ",
+                ""
+            ]
+        }
+
+        return random.choice(fillers.get(context, ['']))
+
+    def _create_reflective_response(self, message: str, emotion: str) -> Optional[str]:
+        """
+        Create a reflective listening response that mirrors back what user said
+        This validates their experience and shows active listening
+        """
+        import random
+        import re
+
+        message_lower = message.lower()
+
+        # Extract key phrases to reflect back
+        reflection_patterns = [
+            (r"i (?:feel|felt|am feeling) ([^.,!?]+)", "So you're feeling {}, "),
+            (r"(?:can't|cannot) ([^.,!?]+)", "It sounds like you can't {}, "),
+            (r"(?:struggling|struggle) with ([^.,!?]+)", "You're struggling with {}, "),
+            (r"i'm ([^.,!?]+)", "So you're {}, "),
+        ]
+
+        for pattern, template in reflection_patterns:
+            match = re.search(pattern, message_lower)
+            if match:
+                reflected = match.group(1).strip()
+                if len(reflected) > 3 and len(reflected) < 40:
+                    return template.format(reflected)
+
+        # Generic reflections based on emotion
+        emotion_reflections = {
+            'sadness': [
+                "It sounds like you're going through a really tough time. ",
+                "I hear that things are feeling heavy right now. "
+            ],
+            'fear': [
+                "It sounds like there's a lot weighing on your mind. ",
+                "I hear that you're dealing with some difficult worries. "
+            ],
+            'anger': [
+                "It sounds like something's really gotten to you. ",
+                "I hear that you're dealing with some frustrating situations. "
+            ]
+        }
+
+        if emotion in emotion_reflections:
+            return random.choice(emotion_reflections[emotion])
+
+        return None
+
     def _get_topic_specific_followup(self, topics: List[str]) -> Optional[str]:
         """
         Get topic-specific follow-up questions or comments
@@ -512,6 +642,72 @@ class ChatService:
         primary_topic = topics[0]
         if primary_topic in topic_followups:
             return random.choice(topic_followups[primary_topic])
+
+        return None
+
+    def _get_intensity_response(self, emotion: str, intensity: str) -> Optional[str]:
+        """
+        Get emotion and intensity-aware opening responses
+        Provides nuanced responses based on how intense the emotion is
+        """
+        import random
+
+        intensity_responses = {
+            'sadness': {
+                'mild': [
+                    "I can tell something's weighing on you a bit. ",
+                    "It sounds like you're not feeling your best today. ",
+                    "I hear you're going through a rough patch. "
+                ],
+                'moderate': [
+                    "I can hear that you're feeling pretty down right now. ",
+                    "It sounds like things have been tough lately. ",
+                    "I can sense you're dealing with some real sadness. "
+                ],
+                'intense': [
+                    "I can hear that you're in a lot of pain right now. ",
+                    "It sounds like you're really struggling with how you're feeling. ",
+                    "I can tell you're going through something extremely difficult. "
+                ]
+            },
+            'fear': {
+                'mild': [
+                    "It seems like something's on your mind. ",
+                    "I can sense a bit of worry there. ",
+                    "Sounds like you've got some concerns. "
+                ],
+                'moderate': [
+                    "I can hear that you're feeling pretty anxious about this. ",
+                    "It sounds like this is causing you real stress. ",
+                    "I can sense you're dealing with some significant worry. "
+                ],
+                'intense': [
+                    "I can hear that the anxiety is really overwhelming right now. ",
+                    "It sounds like you're dealing with a lot of fear and stress. ",
+                    "I can tell this is causing you intense worry. "
+                ]
+            },
+            'anger': {
+                'mild': [
+                    "I can tell something's bothering you. ",
+                    "Sounds like something got to you a bit. ",
+                    "I hear a bit of frustration there. "
+                ],
+                'moderate': [
+                    "I can hear that you're feeling pretty frustrated with this. ",
+                    "It sounds like something's really getting under your skin. ",
+                    "I can sense some real anger there - that's valid. "
+                ],
+                'intense': [
+                    "I can hear how angry and frustrated you are - those feelings are real. ",
+                    "It sounds like you're dealing with a lot of rage right now. ",
+                    "I can tell this has pushed you to your limit. "
+                ]
+            }
+        }
+
+        if emotion in intensity_responses and intensity in intensity_responses[emotion]:
+            return random.choice(intensity_responses[emotion][intensity])
 
         return None
 
@@ -627,6 +823,10 @@ class ChatService:
         risk_level = fusion_result.get('overall_risk_level', 'none')
         dominant_emotion = fusion_result.get('dominant_emotion', 'neutral')
         emotional_state = fusion_result.get('emotional_state', 'stable')
+        emotion_confidence = fusion_result.get('dominant_emotion_confidence', 0.5)
+
+        # Detect emotion intensity for nuanced responses
+        intensity = self._detect_emotion_intensity(message, emotion_confidence)
 
         # Analyze message for personalization
         message_analysis = self._analyze_message(message)
@@ -681,9 +881,14 @@ class ChatService:
         if risk_level == 'moderate':
             response = ""
 
+            # Add natural opening filler sometimes
+            opening_filler = self._get_natural_filler('opening')
+            if opening_filler:
+                response += opening_filler
+
             # Add continuity phrase if topic mentioned before
             if conversation_context and conversation_context.get('continuity_phrase'):
-                response = conversation_context['continuity_phrase']
+                response += conversation_context['continuity_phrase']
 
             # Acknowledge emotional progress if applicable
             if session_history.get('has_history'):
@@ -691,14 +896,27 @@ class ChatService:
                 if progress_ack:
                     response += progress_ack
 
-            # Add personalized acknowledgment if available
-            personalized_ack = self._create_personalized_acknowledgment(message_analysis)
-            if personalized_ack:
-                response += personalized_ack
+            # Try reflective listening first for natural feel
+            reflective = self._create_reflective_response(message, dominant_emotion)
+            if reflective:
+                response += reflective
+
+            # Add intensity-aware response
+            intensity_response = self._get_intensity_response(dominant_emotion, intensity)
+            if intensity_response:
+                response += intensity_response
             else:
-                # Get emotion-specific template
-                emotion_templates = templates['moderate'].get(dominant_emotion, templates['moderate']['neutral'])
-                response += random.choice(emotion_templates)
+                # Add personalized acknowledgment if available
+                personalized_ack = self._create_personalized_acknowledgment(message_analysis)
+                if personalized_ack:
+                    response += personalized_ack
+                else:
+                    # Get emotion-specific template
+                    emotion_templates = templates['moderate'].get(dominant_emotion, templates['moderate']['neutral'])
+                    response += random.choice(emotion_templates)
+
+            # Add empathy filler
+            response += self._get_natural_filler('empathy')
 
             # Add topic-specific follow-up if available
             topic_followup = self._get_topic_specific_followup(message_analysis.get('topics', []))
@@ -736,24 +954,41 @@ class ChatService:
         # Low risk / Normal conversation (RAG-enhanced with helpful information)
         base_response = ""
 
+        # Add natural opening filler for casual tone
+        opening_filler = self._get_natural_filler('opening')
+        if opening_filler:
+            base_response += opening_filler
+
         # Add continuity phrase if topic mentioned before
         if conversation_context and conversation_context.get('continuity_phrase'):
-            base_response = conversation_context['continuity_phrase']
+            base_response += conversation_context['continuity_phrase']
 
         # Acknowledge emotional progress if user is improving
         if session_history.get('has_history'):
             progress_ack = self._get_progress_acknowledgment(session_history.get('emotion_trend', 'stable'))
             if progress_ack:
                 base_response += progress_ack
+                # Add agreement filler after progress acknowledgment
+                base_response += self._get_natural_filler('agreement')
 
-        # Add personalized acknowledgment if available
-        personalized_ack = self._create_personalized_acknowledgment(message_analysis)
-        if personalized_ack:
-            base_response += personalized_ack
+        # Try reflective listening for more natural feel
+        reflective = self._create_reflective_response(message, dominant_emotion)
+        if reflective:
+            base_response += reflective
+
+        # Add intensity-aware response for nuanced understanding
+        intensity_response = self._get_intensity_response(dominant_emotion, intensity)
+        if intensity_response:
+            base_response += intensity_response
         else:
-            # Get emotion-specific template from low_risk category
-            emotion_templates = templates['low_risk'].get(dominant_emotion, templates['low_risk']['neutral'])
-            base_response += random.choice(emotion_templates)
+            # Add personalized acknowledgment if available
+            personalized_ack = self._create_personalized_acknowledgment(message_analysis)
+            if personalized_ack:
+                base_response += personalized_ack
+            else:
+                # Get emotion-specific template from low_risk category
+                emotion_templates = templates['low_risk'].get(dominant_emotion, templates['low_risk']['neutral'])
+                base_response += random.choice(emotion_templates)
 
         # Use topic-specific follow-up if available
         topic_followup = self._get_topic_specific_followup(message_analysis.get('topics', []))
