@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from ..repositories.chat_repo import ChatRepository
 from ..ml.unified_pipeline import get_unified_pipeline
 from ..ml.rag import get_rag_pipeline
@@ -258,9 +258,9 @@ class ChatService:
             'work_stress': ['work', 'job', 'boss', 'career', 'office', 'colleague'],
             'relationship': ['relationship', 'partner', 'boyfriend', 'girlfriend', 'spouse', 'marriage', 'breakup', 'divorce'],
             'family': ['family', 'parent', 'mother', 'father', 'mom', 'dad', 'sibling', 'brother', 'sister'],
-            'loneliness': ['lonely', 'alone', 'isolated', 'nobody', 'no one', 'friends'],
-            'anxiety': ['anxious', 'worried', 'nervous', 'panic', 'stress', 'overwhelmed'],
-            'depression': ['depressed', 'sad', 'hopeless', 'worthless', 'empty', 'numb'],
+            'loneliness': ['lonely', 'alone', 'isolated', 'nobody', 'no one'],
+            'anxiety': ['anxious', 'worried', 'nervous', 'panic', 'overwhelmed'],
+            'depression': ['depressed', 'hopeless', 'worthless', 'empty', 'numb'],  # Removed 'sad' - it's too general
             'self_harm': ['hurt myself', 'harm', 'cut', 'suicide', 'kill myself', 'end it', 'die'],
             'sleep': ['sleep', 'insomnia', 'tired', 'exhausted', 'can\'t sleep'],
             'health': ['sick', 'pain', 'ill', 'disease', 'diagnosis'],
