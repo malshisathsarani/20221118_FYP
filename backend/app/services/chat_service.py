@@ -59,12 +59,13 @@ class ChatService:
                 except Exception as e:
                     logger.warning(f"RAG retrieval failed: {e}")
 
-            # Generate response based on fusion result and RAG context
+            # Generate response based on fusion result, RAG context, and session history
             response_text = self._generate_response(
                 message=chat_request.message,
                 fusion_result=fusion_result,
                 crisis_assessment=crisis_assessment,
-                rag_context=rag_context
+                rag_context=rag_context,
+                session_id=chat_request.session_id  # Pass session_id for history
             )
 
             # Map fusion risk level to database crisis level
@@ -170,6 +171,350 @@ class ChatService:
         }
         return risk_map.get(risk_level, 0)
 
+    def _analyze_session_history(self, session_id: str, limit: int = 5) -> Dict[str, Any]:
+        """
+        Analyze recent session history to understand conversation context
+
+        Returns:
+            Dict with session patterns, recurring topics, emotional progression
+        """
+        # Get recent messages from this session
+        recent_chats = self.chat_repo.get_by_session(session_id, limit=limit)
+
+        if not recent_chats or len(recent_chats) == 0:
+            return {
+                'has_history': False,
+                'message_count': 0,
+                'recurring_topics': [],
+                'recent_emotions': [],
+                'emotion_trend': 'stable',
+                'recent_messages': []
+            }
+
+        # Extract patterns
+        emotions = [chat.detected_emotion for chat in recent_chats if chat.detected_emotion]
+        crisis_levels = [chat.is_crisis for chat in recent_chats]
+        recent_messages = [chat.message for chat in recent_chats]
+
+        # Identify recurring topics from recent messages
+        all_topics = []
+        for msg in recent_messages:
+            msg_analysis = self._analyze_message(msg)
+            all_topics.extend(msg_analysis.get('topics', []))
+
+        # Count topic frequency
+        from collections import Counter
+        topic_counts = Counter(all_topics)
+        recurring_topics = [topic for topic, count in topic_counts.items() if count >= 2]
+
+        # Determine emotional trend
+        emotion_trend = 'stable'
+        if len(emotions) >= 3:
+            negative_emotions = ['sadness', 'fear', 'anger']
+            recent_negative = sum(1 for e in emotions[-3:] if e in negative_emotions)
+            older_negative = sum(1 for e in emotions[:-3] if e in negative_emotions) if len(emotions) > 3 else 0
+
+            if recent_negative > older_negative:
+                emotion_trend = 'worsening'
+            elif recent_negative < older_negative:
+                emotion_trend = 'improving'
+
+        # Check for crisis escalation
+        crisis_escalating = False
+        if len(crisis_levels) >= 2:
+            crisis_escalating = crisis_levels[-1] > crisis_levels[-2]
+
+        return {
+            'has_history': True,
+            'message_count': len(recent_chats),
+            'recurring_topics': recurring_topics,
+            'recent_emotions': emotions[-3:] if len(emotions) >= 3 else emotions,
+            'emotion_trend': emotion_trend,
+            'crisis_escalating': crisis_escalating,
+            'recent_messages': recent_messages[-2:],  # Last 2 messages for reference
+            'dominant_recent_emotion': emotions[-1] if emotions else None
+        }
+
+    def _analyze_message(self, message: str) -> Dict[str, Any]:
+        """
+        Analyze user message to extract key information for personalization
+
+        Returns:
+            Dict with message analysis including topics, key phrases, question type
+        """
+        import re
+
+        message_lower = message.lower()
+
+        # Detect if it's a question
+        is_question = '?' in message or any(message_lower.startswith(q) for q in [
+            'how', 'what', 'why', 'when', 'where', 'who', 'can', 'could',
+            'should', 'would', 'is', 'are', 'do', 'does'
+        ])
+
+        # Extract key emotional/mental health topics
+        topics = []
+        topic_keywords = {
+            'work_stress': ['work', 'job', 'boss', 'career', 'office', 'colleague'],
+            'relationship': ['relationship', 'partner', 'boyfriend', 'girlfriend', 'spouse', 'marriage', 'breakup', 'divorce'],
+            'family': ['family', 'parent', 'mother', 'father', 'mom', 'dad', 'sibling', 'brother', 'sister'],
+            'loneliness': ['lonely', 'alone', 'isolated', 'nobody', 'no one', 'friends'],
+            'anxiety': ['anxious', 'worried', 'nervous', 'panic', 'stress', 'overwhelmed'],
+            'depression': ['depressed', 'sad', 'hopeless', 'worthless', 'empty', 'numb'],
+            'self_harm': ['hurt myself', 'harm', 'cut', 'suicide', 'kill myself', 'end it', 'die'],
+            'sleep': ['sleep', 'insomnia', 'tired', 'exhausted', 'can\'t sleep'],
+            'health': ['sick', 'pain', 'ill', 'disease', 'diagnosis'],
+            'financial': ['money', 'debt', 'financial', 'bills', 'broke', 'afford'],
+            'school': ['school', 'college', 'university', 'exam', 'grades', 'study']
+        }
+
+        for topic, keywords in topic_keywords.items():
+            if any(keyword in message_lower for keyword in keywords):
+                topics.append(topic)
+
+        # Extract important phrases (noun phrases, concerns)
+        # Simple extraction: look for phrases after "about", "with", "because"
+        concern_phrases = []
+        concern_patterns = [
+            r'(?:about|regarding|concerning)\s+([^.,!?]+)',
+            r'(?:with|from)\s+(my|the|this)\s+([^.,!?]+)',
+            r'because\s+([^.,!?]+)',
+        ]
+
+        for pattern in concern_patterns:
+            matches = re.findall(pattern, message_lower)
+            for match in matches:
+                if isinstance(match, tuple):
+                    phrase = ' '.join(match).strip()
+                else:
+                    phrase = match.strip()
+                if len(phrase) > 3 and len(phrase) < 50:  # Reasonable length
+                    concern_phrases.append(phrase)
+
+        # Detect sentiment indicators
+        negative_words = sum(1 for word in ['not', 'no', 'never', 'nothing', 'nobody', 'can\'t', 'won\'t', 'don\'t'] if word in message_lower.split())
+
+        # Extract key verbs (what they're doing/feeling)
+        feeling_verbs = []
+        feeling_patterns = [
+            r'i(?:\'m| am)\s+(feeling|felt|feel)\s+([^.,!?]+)',
+            r'i(?:\'m| am)\s+([^.,!?]{3,20})',  # "I'm overwhelmed", "I'm struggling"
+        ]
+
+        for pattern in feeling_patterns:
+            matches = re.findall(pattern, message_lower)
+            for match in matches:
+                if isinstance(match, tuple):
+                    verb = match[-1].strip()
+                else:
+                    verb = match.strip()
+                if verb and len(verb) > 2:
+                    feeling_verbs.append(verb)
+
+        return {
+            'is_question': is_question,
+            'topics': topics,
+            'concern_phrases': concern_phrases[:3],  # Top 3
+            'feeling_verbs': feeling_verbs[:2],  # Top 2
+            'message_length': len(message.split()),
+            'has_negation': negative_words > 0,
+            'urgency': len([w for w in ['urgent', 'emergency', 'immediate', 'now', 'help'] if w in message_lower])
+        }
+
+    def _build_conversation_context(
+        self,
+        session_history: Dict[str, Any],
+        current_message_analysis: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Build conversation context by combining session history with current message
+
+        Returns:
+            Dict with context flags for response generation
+        """
+        import random
+
+        context = {
+            'is_continuation': False,
+            'topic_mentioned_before': False,
+            'emotion_changing': False,
+            'should_acknowledge_progress': False,
+            'continuity_phrase': None,
+            'recurring_topic': None
+        }
+
+        if not session_history.get('has_history'):
+            return context
+
+        # Check if current topics were mentioned before
+        current_topics = current_message_analysis.get('topics', [])
+        recurring_topics = session_history.get('recurring_topics', [])
+
+        for topic in current_topics:
+            if topic in recurring_topics:
+                context['is_continuation'] = True
+                context['topic_mentioned_before'] = True
+                context['recurring_topic'] = topic
+                break
+
+        # Check emotional progression
+        current_emotion = current_message_analysis.get('topics', [])
+        if 'anxiety' in current_emotion or 'depression' in current_emotion:
+            emotion_trend = session_history.get('emotion_trend')
+            if emotion_trend == 'improving':
+                context['should_acknowledge_progress'] = True
+            elif emotion_trend == 'worsening':
+                context['emotion_changing'] = True
+
+        # Generate continuity phrases based on context
+        if context['topic_mentioned_before']:
+            topic_name_map = {
+                'work_stress': 'work',
+                'relationship': 'your relationship',
+                'family': 'your family situation',
+                'loneliness': 'feeling isolated',
+                'anxiety': 'the anxiety',
+                'sleep': 'sleep troubles',
+                'financial': 'money concerns',
+                'school': 'school stress'
+            }
+            topic_display = topic_name_map.get(context['recurring_topic'], 'this')
+
+            continuity_phrases = [
+                f"I remember you mentioned {topic_display} earlier. ",
+                f"You've brought up {topic_display} before. ",
+                f"It sounds like {topic_display} is still on your mind. ",
+                f"{topic_display.capitalize()} is still weighing on you. ",
+            ]
+            context['continuity_phrase'] = random.choice(continuity_phrases)
+
+        return context
+
+    def _create_personalized_acknowledgment(self, message_analysis: Dict[str, Any]) -> str:
+        """
+        Create a personalized acknowledgment based on message analysis
+        Makes the bot reference specific things the user mentioned
+        """
+        import random
+
+        topics = message_analysis.get('topics', [])
+        concern_phrases = message_analysis.get('concern_phrases', [])
+        feeling_verbs = message_analysis.get('feeling_verbs', [])
+        is_question = message_analysis.get('is_question', False)
+
+        # Topic-specific acknowledgments
+        topic_acknowledgments = {
+            'work_stress': ["Work stress can be really tough to handle. ", "I hear that work has been weighing on you. ", "Job pressures can feel overwhelming. "],
+            'relationship': ["Relationship struggles are never easy. ", "I can tell this relationship situation is affecting you. ", "Matters of the heart can be so challenging. "],
+            'family': ["Family dynamics can be complicated. ", "I hear that family issues are on your mind. ", "Family situations can feel really heavy. "],
+            'loneliness': ["Feeling isolated is really hard. ", "Loneliness can be such a painful experience. ", "I hear that you're feeling alone right now. "],
+            'anxiety': ["Anxiety can feel so overwhelming. ", "I can sense the worry you're carrying. ", "That anxious feeling is really difficult. "],
+            'depression': ["Depression makes everything feel harder. ", "I can hear how heavy things feel for you. ", "What you're describing sounds really difficult. "],
+            'sleep': ["Sleep issues can affect everything else. ", "Not sleeping well makes everything harder. ", "I hear that sleep has been difficult. "],
+            'financial': ["Money worries create so much stress. ", "Financial pressure is really tough. ", "I understand money concerns are weighing on you. "],
+            'school': ["Academic pressure can feel intense. ", "School stress is really challenging. ", "I hear that your studies are weighing on you. "],
+        }
+
+        acknowledgment = ""
+
+        # Use topic-specific acknowledgment if available
+        if topics:
+            primary_topic = topics[0]
+            if primary_topic in topic_acknowledgments:
+                acknowledgment = random.choice(topic_acknowledgments[primary_topic])
+
+        # Add specific concern if mentioned
+        if concern_phrases and concern_phrases[0]:
+            concern = concern_phrases[0]
+            acknowledgment += f"What you mentioned about {concern} sounds really challenging. "
+
+        # Reference their feeling if they expressed it
+        if feeling_verbs and feeling_verbs[0]:
+            feeling = feeling_verbs[0]
+            if not acknowledgment:  # Only if we haven't acknowledged yet
+                acknowledgment = f"I hear that you're {feeling}. "
+
+        return acknowledgment
+
+    def _get_progress_acknowledgment(self, emotion_trend: str) -> Optional[str]:
+        """
+        Acknowledge emotional progress if user is improving
+        Makes conversation feel continuous and supportive
+        """
+        import random
+
+        if emotion_trend == 'improving':
+            acknowledgments = [
+                "I'm glad to hear things seem a bit better than last time we talked. ",
+                "It sounds like you're feeling a little more positive than earlier. ",
+                "I can sense some improvement from our earlier conversation. ",
+                "There seems to be a bit of a shift from how you were feeling before. ",
+            ]
+            return random.choice(acknowledgments)
+        elif emotion_trend == 'worsening':
+            acknowledgments = [
+                "I notice things seem harder than when we last talked. ",
+                "It sounds like things have gotten more difficult since earlier. ",
+                "I can hear that you're struggling more than before. ",
+            ]
+            return random.choice(acknowledgments)
+
+        return None
+
+    def _get_topic_specific_followup(self, topics: List[str]) -> Optional[str]:
+        """
+        Get topic-specific follow-up questions or comments
+        Makes conversation feel tailored to their situation
+        """
+        import random
+
+        if not topics:
+            return None
+
+        topic_followups = {
+            'work_stress': [
+                "How long has this been going on at work?",
+                "Is there something specific at work that's been triggering this?",
+                "Have you been able to talk to anyone about what's happening at work?",
+            ],
+            'relationship': [
+                "How has this been affecting you day-to-day?",
+                "Have you two been able to talk about this?",
+                "How long have you been feeling this way about the relationship?",
+            ],
+            'family': [
+                "How has this family situation been impacting you?",
+                "Is this a new issue or something that's been ongoing?",
+                "Have you had anyone to talk to about this?",
+            ],
+            'loneliness': [
+                "How long have you been feeling this way?",
+                "Is there anyone in your life you feel you can reach out to?",
+                "What usually helps when you're feeling isolated?",
+            ],
+            'sleep': [
+                "How long has sleep been an issue?",
+                "Have you noticed what might be affecting your sleep?",
+                "How is the lack of sleep impacting your daily life?",
+            ],
+            'financial': [
+                "How long have you been dealing with this financial stress?",
+                "Is there anyone who can help you think through options?",
+                "How is this affecting your day-to-day life?",
+            ],
+            'school': [
+                "How are you managing with everything on your plate?",
+                "Is there a particular aspect of school that's most stressful?",
+                "Have you been able to talk to anyone about the academic pressure?",
+            ],
+        }
+
+        primary_topic = topics[0]
+        if primary_topic in topic_followups:
+            return random.choice(topic_followups[primary_topic])
+
+        return None
+
     def _get_response_templates(self) -> Dict[str, Dict[str, List[str]]]:
         """
         Get varied response templates for different emotions and risk levels
@@ -268,12 +613,13 @@ class ChatService:
         message: str,
         fusion_result: Dict,
         crisis_assessment: Dict,
-        rag_context: Optional[str] = None
+        rag_context: Optional[str] = None,
+        session_id: Optional[str] = None
     ) -> str:
         """
-        Generate appropriate response based on fusion analysis and RAG context
+        Generate appropriate response based on fusion analysis, RAG context, and session history
 
-        Uses multi-modal fusion result and retrieved knowledge to create
+        Uses multi-modal fusion result, retrieved knowledge, and conversation history to create
         empathetic, evidence-based, context-aware response
         """
         import random
@@ -282,13 +628,38 @@ class ChatService:
         dominant_emotion = fusion_result.get('dominant_emotion', 'neutral')
         emotional_state = fusion_result.get('emotional_state', 'stable')
 
+        # Analyze message for personalization
+        message_analysis = self._analyze_message(message)
+
+        # Analyze session history for conversation continuity
+        session_history = {'has_history': False}
+        conversation_context = None
+        if session_id:
+            session_history = self._analyze_session_history(session_id)
+            conversation_context = self._build_conversation_context(session_history, message_analysis)
+
         # Get response templates
         templates = self._get_response_templates()
 
         # Critical/High risk responses (RAG-enhanced with crisis protocols)
         if risk_level in ['critical', 'high']:
-            # Use varied, warm opening instead of scripted response
-            base_response = random.choice(templates['crisis']['opening'])
+            base_response = ""
+
+            # Add continuity phrase if topic mentioned before
+            if conversation_context and conversation_context.get('continuity_phrase'):
+                base_response = conversation_context['continuity_phrase']
+
+            # Add personalized acknowledgment if available
+            personalized_ack = self._create_personalized_acknowledgment(message_analysis)
+            if personalized_ack:
+                base_response += personalized_ack
+
+            # Add crisis opening
+            base_response += random.choice(templates['crisis']['opening'])
+
+            # Acknowledge if situation is worsening
+            if conversation_context and conversation_context.get('emotion_changing'):
+                base_response += "I'm especially concerned that things seem to be getting harder for you. "
 
             # Add crisis resources in a natural way
             base_response += random.choice(templates['crisis']['resource'])
@@ -297,8 +668,9 @@ class ChatService:
             if rag_context:
                 crisis_support = self._extract_crisis_support(rag_context)
                 if crisis_support:
-                    # Make it sound conversational, not copy-pasted
-                    base_response += f"\n\n{crisis_support} "
+                    # Format for crisis context
+                    formatted_support = self._format_rag_for_context(crisis_support, risk_level, dominant_emotion)
+                    base_response += f"\n\n{formatted_support} "
 
             # Warm, caring closing
             base_response += random.choice(templates['crisis']['closing'])
@@ -307,23 +679,49 @@ class ChatService:
 
         # Moderate risk responses (RAG-enhanced with coping strategies)
         if risk_level == 'moderate':
-            # Get emotion-specific template
-            emotion_templates = templates['moderate'].get(dominant_emotion, templates['moderate']['neutral'])
-            base_response = random.choice(emotion_templates)
+            response = ""
 
-            # Add varied follow-up question
-            follow_ups = [
-                "Would you like to talk more about what's been going on? ",
-                "Do you want to share more about what's troubling you? ",
-                "I'm here if you want to talk through this. ",
-            ]
-            response = base_response + random.choice(follow_ups)
+            # Add continuity phrase if topic mentioned before
+            if conversation_context and conversation_context.get('continuity_phrase'):
+                response = conversation_context['continuity_phrase']
+
+            # Acknowledge emotional progress if applicable
+            if session_history.get('has_history'):
+                progress_ack = self._get_progress_acknowledgment(session_history.get('emotion_trend', 'stable'))
+                if progress_ack:
+                    response += progress_ack
+
+            # Add personalized acknowledgment if available
+            personalized_ack = self._create_personalized_acknowledgment(message_analysis)
+            if personalized_ack:
+                response += personalized_ack
+            else:
+                # Get emotion-specific template
+                emotion_templates = templates['moderate'].get(dominant_emotion, templates['moderate']['neutral'])
+                response += random.choice(emotion_templates)
+
+            # Add topic-specific follow-up if available
+            topic_followup = self._get_topic_specific_followup(message_analysis.get('topics', []))
+            if topic_followup:
+                response += topic_followup + " "
+            else:
+                # Add varied follow-up question
+                follow_ups = [
+                    "Would you like to talk more about what's been going on? ",
+                    "Do you want to share more about what's troubling you? ",
+                    "I'm here if you want to talk through this. ",
+                ]
+                response += random.choice(follow_ups)
 
             # Blend RAG coping strategies naturally
             if rag_context:
                 coping_info = self._extract_coping_strategies(rag_context)
                 if coping_info:
-                    response += f"\n\n{coping_info}\n\n"
+                    # Format for moderate-risk context
+                    formatted_info = self._format_rag_for_context(coping_info, risk_level, dominant_emotion)
+                    # Add smooth transition
+                    smooth_info = self._create_smooth_transition(response, formatted_info, risk_level)
+                    response += f"\n\n{smooth_info}\n\n"
 
             # Gentle support reminder with variation
             support_reminders = [
@@ -336,86 +734,336 @@ class ChatService:
             return response
 
         # Low risk / Normal conversation (RAG-enhanced with helpful information)
-        # Get emotion-specific template from low_risk category
-        emotion_templates = templates['low_risk'].get(dominant_emotion, templates['low_risk']['neutral'])
-        base_response = random.choice(emotion_templates)
+        base_response = ""
+
+        # Add continuity phrase if topic mentioned before
+        if conversation_context and conversation_context.get('continuity_phrase'):
+            base_response = conversation_context['continuity_phrase']
+
+        # Acknowledge emotional progress if user is improving
+        if session_history.get('has_history'):
+            progress_ack = self._get_progress_acknowledgment(session_history.get('emotion_trend', 'stable'))
+            if progress_ack:
+                base_response += progress_ack
+
+        # Add personalized acknowledgment if available
+        personalized_ack = self._create_personalized_acknowledgment(message_analysis)
+        if personalized_ack:
+            base_response += personalized_ack
+        else:
+            # Get emotion-specific template from low_risk category
+            emotion_templates = templates['low_risk'].get(dominant_emotion, templates['low_risk']['neutral'])
+            base_response += random.choice(emotion_templates)
+
+        # Use topic-specific follow-up if available
+        topic_followup = self._get_topic_specific_followup(message_analysis.get('topics', []))
 
         # Add RAG context naturally if available
         if rag_context:
             context_snippet = self._extract_relevant_snippet(rag_context, max_length=200)
             if context_snippet:
-                # Blend context and add varied follow-up
-                response = f"{base_response}\n\n{context_snippet}\n\n{random.choice(templates['follow_up'])}"
+                # Format for low-risk context
+                formatted_snippet = self._format_rag_for_context(context_snippet, risk_level, dominant_emotion)
+                # Add smooth transition
+                smooth_snippet = self._create_smooth_transition(base_response, formatted_snippet, risk_level)
+
+                # Blend context and add personalized follow-up
+                if topic_followup:
+                    response = f"{base_response}\n\n{smooth_snippet}\n\n{topic_followup}"
+                else:
+                    response = f"{base_response}\n\n{smooth_snippet}\n\n{random.choice(templates['follow_up'])}"
                 return response
 
-        # Without RAG context, add natural follow-up question
-        return f"{base_response} {random.choice(templates['follow_up'])}"
+        # Without RAG context, use topic-specific or general follow-up
+        if topic_followup:
+            return f"{base_response} {topic_followup}"
+        else:
+            return f"{base_response} {random.choice(templates['follow_up'])}"
+
+    def _clean_rag_text(self, text: str) -> str:
+        """
+        Clean RAG text by removing metadata, markers, and formatting issues
+        Makes text more natural and conversational
+        """
+        import re
+
+        # Remove common metadata markers
+        text = re.sub(r'\[Source:.*?\]', '', text)
+        text = re.sub(r'\[Document ID:.*?\]', '', text)
+        text = re.sub(r'\[Page \d+\]', '', text)
+        text = re.sub(r'Document \d+:', '', text)
+
+        # Remove separators
+        text = text.replace('---', '')
+        text = text.replace('===', '')
+        text = text.replace('***', '')
+
+        # Remove bullet points and list markers
+        text = re.sub(r'^\s*[\-\*\•]\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+
+        # Remove citation markers like [1], [2], etc.
+        text = re.sub(r'\[\d+\]', '', text)
+
+        return text
 
     def _extract_crisis_support(self, context: str, max_length: int = 300) -> str:
-        """Extract crisis-relevant information from RAG context"""
-        # Simple extraction - look for crisis-related keywords
-        lines = context.split('\n')
+        """Extract crisis-relevant information from RAG context in a supportive way"""
+        import re
+        import random
+
+        # Clean the context first
+        clean_context = self._clean_rag_text(context)
+
+        lines = clean_context.split('.')
         relevant_lines = []
 
         for line in lines:
             line = line.strip()
-            if any(keyword in line.lower() for keyword in [
-                'crisis', 'suicide', 'emergency', 'immediate', 'call', 'hotline'
-            ]):
-                relevant_lines.append(line)
+            if not line:
+                continue
 
-        result = ' '.join(relevant_lines)[:max_length]
-        return result if result else ""
+            # Look for crisis-related content
+            if any(keyword in line.lower() for keyword in [
+                'crisis', 'suicide', 'emergency', 'immediate', 'call', 'hotline',
+                'help', 'support', 'resource', 'available', '988', 'lifeline'
+            ]):
+                # Skip overly technical or impersonal lines
+                if not any(skip in line.lower() for skip in ['study', 'research shows', 'data', 'statistics']):
+                    relevant_lines.append(line)
+
+        if not relevant_lines:
+            return ""
+
+        # Build result focusing on actionable, supportive information
+        result = '. '.join(relevant_lines[:2])[:max_length]  # Max 2 sentences
+
+        if result:
+            # Make it sound supportive, not clinical
+            supportive_intros = [
+                "There are immediate resources that can help: ",
+                "Help is available right now: ",
+                "You can get support immediately: ",
+            ]
+            return random.choice(supportive_intros) + result + "."
+
+        return ""
+
+    def _simplify_text(self, text: str) -> str:
+        """
+        Simplify complex/academic text to make it more conversational
+        """
+        # Replace formal phrases with casual ones
+        replacements = {
+            'individuals': 'people',
+            'utilize': 'use',
+            'implement': 'try',
+            'demonstrates': 'shows',
+            'indicates': 'suggests',
+            'furthermore': 'also',
+            'therefore': 'so',
+            'however': 'but',
+            'nevertheless': 'still',
+            'subsequently': 'then',
+            'approximately': 'about',
+            'numerous': 'many',
+            'sufficient': 'enough',
+            'commence': 'start',
+            'terminate': 'end',
+        }
+
+        text_lower = text
+        for formal, casual in replacements.items():
+            # Case-insensitive replacement
+            import re
+            text_lower = re.sub(r'\b' + formal + r'\b', casual, text_lower, flags=re.IGNORECASE)
+
+        return text_lower
 
     def _extract_coping_strategies(self, context: str, max_length: int = 250) -> str:
         """Extract coping strategies from RAG context in a conversational way"""
         import random
+        import re
 
-        lines = context.split('\n')
+        # Clean the context first
+        clean_context = self._clean_rag_text(context)
+
+        lines = clean_context.split('.')
         relevant_lines = []
 
         for line in lines:
             line = line.strip()
+            if not line or len(line) < 10:
+                continue
+
+            # Look for strategy-related content
             if any(keyword in line.lower() for keyword in [
                 'technique', 'strategy', 'practice', 'exercise', 'breathing',
-                'mindfulness', 'coping', 'help', 'manage'
+                'mindfulness', 'coping', 'can help', 'try', 'manage', 'reduce',
+                'relax', 'calm', 'focus', 'ground'
             ]):
-                relevant_lines.append(line)
+                # Skip overly technical or research-focused lines
+                if not any(skip in line.lower() for skip in [
+                    'study', 'research', 'p <', 'statistical', 'hypothesis',
+                    'correlation', 'participants', 'meta-analysis'
+                ]):
+                    relevant_lines.append(line)
 
-        result = ' '.join(relevant_lines)[:max_length]
+        if not relevant_lines:
+            return ""
+
+        # Take best 1-2 sentences
+        result = '. '.join(relevant_lines[:2])[:max_length]
+
+        # Simplify the text
+        result = self._simplify_text(result)
+
+        # Make sure it ends with a period
+        if result and not result.endswith('.'):
+            result += '.'
+
         if result:
-            # Make it sound conversational, not like citing research
+            # Make it sound like sharing helpful advice, not quoting a textbook
             intro_phrases = [
                 "Something that might help: ",
-                "Here's an idea that could be useful: ",
-                "You might want to try this: ",
-                "One thing that often helps people: ",
-                "A technique worth considering: ",
+                "Here's an idea - ",
+                "You could try this: ",
+                "One thing that often helps: ",
+                "A technique worth trying: ",
+                "What sometimes works: ",
             ]
             return random.choice(intro_phrases) + result
         return ""
+
+    def _create_smooth_transition(
+        self,
+        from_text: str,
+        to_rag_content: str,
+        risk_level: str
+    ) -> str:
+        """
+        Create smooth transition between empathetic response and RAG content
+        Makes the flow feel natural, not jarring
+        """
+        import random
+
+        if not to_rag_content:
+            return ""
+
+        # For crisis, transition is direct (urgent info)
+        if risk_level in ['critical', 'high']:
+            return to_rag_content
+
+        # For moderate/low, add a subtle connector if needed
+        # Check if RAG content already has a natural intro
+        has_intro = any(intro in to_rag_content.lower()[:30] for intro in [
+            'something', 'here', 'you', 'one thing', 'what', 'this might', 'i'
+        ])
+
+        if has_intro:
+            # Already has good intro, just return it
+            return to_rag_content
+
+        # Add a subtle connector
+        connectors = [
+            "By the way, ",
+            "Also, ",
+            "Just so you know, ",
+            "",  # Sometimes no connector is best
+        ]
+
+        return random.choice(connectors) + to_rag_content
+
+    def _format_rag_for_context(
+        self,
+        rag_content: str,
+        risk_level: str,
+        dominant_emotion: str,
+        topic: Optional[str] = None
+    ) -> str:
+        """
+        Format RAG content based on conversation context
+        Different formatting for crisis vs. general conversation
+        """
+        import random
+
+        if not rag_content:
+            return ""
+
+        # For crisis situations, keep it brief and actionable
+        if risk_level in ['critical', 'high']:
+            # Already formatted by _extract_crisis_support
+            return rag_content
+
+        # For moderate risk with negative emotions, frame as supportive
+        if risk_level == 'moderate' and dominant_emotion in ['sadness', 'fear', 'anger']:
+            # Already formatted by _extract_coping_strategies
+            # Add empathetic framing if it's just raw text
+            if not any(intro in rag_content.lower() for intro in ['something that', 'here\'s', 'you could', 'one thing']):
+                empathetic_frames = [
+                    "I want to share something that might help: ",
+                    "Here's something worth considering: ",
+                    "This might offer some relief: ",
+                ]
+                return random.choice(empathetic_frames) + rag_content
+
+        # For low-risk/positive conversations, make it informative and light
+        if dominant_emotion in ['joy', 'love', 'neutral']:
+            if not any(intro in rag_content.lower() for intro in ['something that', 'here\'s', 'you know']):
+                light_frames = [
+                    "Interesting fact: ",
+                    "You might find this helpful: ",
+                    "Here's something to keep in mind: ",
+                ]
+                return random.choice(light_frames) + rag_content
+
+        return rag_content
 
     def _extract_relevant_snippet(self, context: str, max_length: int = 300) -> str:
         """Extract a relevant snippet from RAG context in a natural way"""
         if not context:
             return ""
 
-        # Remove metadata headers like [Source: ...] and separators
         import re
         import random
 
-        clean_context = re.sub(r'\[Source:.*?\]', '', context)
-        clean_context = clean_context.replace('---', '').strip()
+        # Clean the context thoroughly
+        clean_context = self._clean_rag_text(context)
 
-        # Split into sentences and take the most relevant ones
-        sentences = [s.strip() for s in clean_context.split('.') if s.strip() and len(s.strip()) > 20]
+        # Split into sentences
+        sentences = [s.strip() for s in clean_context.split('.') if s.strip() and len(s.strip()) > 15]
 
         if not sentences:
             return ""
 
-        # Build snippet from sentences
+        # Filter out overly technical sentences
+        conversational_sentences = []
+        for sentence in sentences:
+            # Skip research-heavy sentences
+            if any(skip in sentence.lower() for skip in [
+                'study found', 'research shows', 'data suggests', 'p <', 'statistical',
+                'correlation', 'participants', 'et al', 'meta-analysis', 'n =',
+                'hypothesis', 'methodology', 'sample size'
+            ]):
+                continue
+
+            # Skip sentences that are too long or complex
+            if len(sentence.split(',')) > 4:  # Too many clauses
+                continue
+
+            conversational_sentences.append(sentence)
+
+        if not conversational_sentences:
+            # If all sentences were technical, use original but simplify
+            conversational_sentences = sentences[:3]
+
+        # Build snippet from best sentences
         snippet = ""
-        for sentence in sentences[:3]:  # Take up to 3 sentences
+        for sentence in conversational_sentences[:2]:  # Max 2 sentences for readability
             if len(snippet) + len(sentence) < max_length:
                 snippet += sentence + ". "
             else:
@@ -423,16 +1071,19 @@ class ChatService:
 
         snippet = snippet.strip()
 
-        # Make it conversational - avoid sounding like you're citing a textbook
+        # Simplify the language
         if snippet:
-            # More natural intro phrases
+            snippet = self._simplify_text(snippet)
+
+            # Make it conversational - sound like you're sharing, not lecturing
             intro_phrases = [
-                "Something that comes to mind: ",
+                "Something that comes to mind - ",
                 "Here's a thought: ",
                 "You know, ",
                 "From what I understand, ",
-                "One thing to consider: ",
-                "This might be helpful: ",
+                "One thing worth knowing: ",
+                "This might help: ",
+                "I've learned that ",
             ]
             return random.choice(intro_phrases) + snippet
 
