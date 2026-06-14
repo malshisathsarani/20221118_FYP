@@ -31,3 +31,9 @@ pydantic[email]==2.5.3
 
 # Cloud Storage
 cloudinary>=1.36.0
+
+# RAG (Retrieval-Augmented Generation)
+sentence-transformers==2.5.1  # For text embeddings
+chromadb==0.4.22              # Vector database
+langchain==0.1.9              # RAG framework
+langchain-community==0.0.24   # Additional langchain tools

@@ -21,7 +21,18 @@
       "Bash(tree -L 3 -a mental-health-chatbot/)",
       "Bash(tree -L 4 -a backend/ -I 'venv|__pycache__|*.pyc')",
       "Bash(python -c \"from app.models.artwork import Artwork; print(''Artwork model imported successfully'')\")",
-      "Bash(grep -E \"\\.(py)$\")"
+      "Bash(grep -E \"\\.(py)$\")",
+      "Bash(python -m pip --version)",
+      "Bash(venv/Scripts/python.exe -m pip install sentence-transformers==2.5.1 chromadb==0.4.22 langchain==0.1.9 langchain-community==0.0.24)",
+      "Bash(mkdir -p backend/app/ml/rag/{embeddings,vector_store,retrieval,prompts,utils,knowledge_base})",
+      "Bash(source venv/bin/activate)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(python -c \"import sentence_transformers; import chromadb; import langchain; print(''All RAG dependencies installed successfully'')\")",
+      "Bash(venv/Scripts/python.exe -c \"import sentence_transformers; import chromadb; import langchain; print(''All RAG dependencies installed successfully'')\")",
+      "Bash(venv/Scripts/python.exe -m pip install sentence-transformers==2.5.1 chromadb==0.4.22 langchain==0.1.9 langchain-community==0.0.24 --default-timeout=300)",
+      "Bash(mkdir -p backend/app/ml/rag/{retrieval,embeddings,vector_store,prompts,utils,knowledge_base})",
+      "Bash(venv/Scripts/python.exe -m pip install sentence-transformers chromadb langchain langchain-community)",
+      "Bash(venv/Scripts/python.exe -c \"from app.ml.rag import get_rag_pipeline; p = get_rag_pipeline(); stats = p.get_stats(); print(f''Documents in KB: {stats[\"\"num_documents\"\"]}''); print(f''Model: {stats[\"\"embedding_model\"\"][\"\"model_name\"\"]}'')\")"
     ],
     "deny": [],
     "ask": []
