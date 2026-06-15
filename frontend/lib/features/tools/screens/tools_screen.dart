@@ -71,7 +71,7 @@ class ToolsScreen extends StatelessWidget {
     return Scaffold(
       appBar: const CustomAppBar(title: 'Wellness Tools'),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -101,7 +101,7 @@ class ToolsScreen extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha:0.05),
                         blurRadius: 10,
                         spreadRadius: 0,
                         offset: const Offset(0, 2),
@@ -124,15 +124,15 @@ class ToolsScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Row(
+                            const Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.access_time,
                                   size: 14,
                                   color: AppColors.textSecondary,
                                 ),
-                                const SizedBox(width: 4),
-                                const Text(
+                                SizedBox(width: 4),
+                                Text(
                                   '5-10 minutes',
                                   style: TextStyle(
                                     fontSize: 13,

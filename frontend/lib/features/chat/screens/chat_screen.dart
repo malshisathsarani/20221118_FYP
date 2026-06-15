@@ -187,7 +187,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isUser
-                      ? Colors.white.withOpacity(0.2)
+                      ? Colors.white.withValues(alpha:0.2)
                       : AppColors.divider,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -205,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.2),
+                  color: AppColors.error.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -253,7 +253,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   (index) => Container(
                     width: 8,
                     height: 8,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.textSecondary,
                       shape: BoxShape.circle,
                     ),
@@ -274,7 +274,7 @@ class _ChatScreenState extends State<ChatScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha:0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

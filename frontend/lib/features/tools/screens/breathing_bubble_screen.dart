@@ -142,14 +142,14 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF667EEA),
-              const Color(0xFF764BA2),
-              const Color(0xFF8B5CF6),
+              Color(0xFF667EEA),
+              Color(0xFF764BA2),
+              Color(0xFF8B5CF6),
             ],
           ),
         ),
@@ -189,7 +189,7 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
@@ -236,10 +236,10 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
                                 height: 8,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(opacity),
+                                  color: Colors.white.withValues(alpha:opacity),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: Colors.white.withValues(alpha:0.5),
                                       blurRadius: 10,
                                       spreadRadius: 2,
                                     ),
@@ -264,20 +264,20 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
                                   colors: [
-                                    Colors.white.withOpacity(0.9),
-                                    const Color(0xFFA78BFA).withOpacity(0.8),
-                                    const Color(0xFF8B5CF6).withOpacity(0.6),
+                                    Colors.white.withValues(alpha:0.9),
+                                    const Color(0xFFA78BFA).withValues(alpha:0.8),
+                                    const Color(0xFF8B5CF6).withValues(alpha:0.6),
                                   ],
                                   stops: const [0.2, 0.6, 1.0],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white.withOpacity(_glowAnimation.value),
+                                    color: Colors.white.withValues(alpha:_glowAnimation.value),
                                     blurRadius: 60,
                                     spreadRadius: 20,
                                   ),
                                   BoxShadow(
-                                    color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                                    color: const Color(0xFF8B5CF6).withValues(alpha:0.4),
                                     blurRadius: 40,
                                     spreadRadius: 10,
                                   ),
@@ -293,7 +293,7 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
                                     letterSpacing: 1,
                                     shadows: [
                                       Shadow(
-                                        color: Colors.white.withOpacity(0.5),
+                                        color: Colors.white.withValues(alpha:0.5),
                                         blurRadius: 10,
                                       ),
                                     ],
@@ -313,7 +313,7 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
               Container(
                 padding: const EdgeInsets.all(32.0),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha:0.2),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                 ),
                 child: Column(
@@ -342,7 +342,7 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha:0.3),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),
@@ -361,7 +361,7 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha:0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -376,7 +376,7 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
                               'Find a quiet space and focus on the bubble\'s rhythm',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha:0.9),
                                 height: 1.4,
                               ),
                             ),

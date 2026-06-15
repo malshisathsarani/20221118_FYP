@@ -24,13 +24,14 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     try {
-      final hasSeenOnboarding = await StorageHelper.hasSeenOnboarding();
       final isLoggedIn = await StorageHelper.isLoggedIn();
 
       if (!mounted) return;
 
       // Always set onboarding as seen for easier testing
       await StorageHelper.setHasSeenOnboarding(true);
+
+      if (!mounted) return;
 
       if (isLoggedIn) {
         Navigator.pushReplacementNamed(context, '/home');
@@ -67,7 +68,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 width: 96,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Icon(
@@ -90,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 'Your mental wellness companion',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha:0.8),
                 ),
               ),
             ],

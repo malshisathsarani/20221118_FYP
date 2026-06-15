@@ -3,7 +3,6 @@ import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'dart:convert';
-import 'dart:typed_data';
 import '../../../core/services/artwork_service.dart';
 import '../../../core/models/artwork.dart';
 
@@ -299,7 +298,7 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha:0.1),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
@@ -327,7 +326,7 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha:0.1),
                               blurRadius: 10,
                             ),
                           ],
@@ -351,7 +350,7 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha:0.1),
                         blurRadius: 10,
                       ),
                     ],
@@ -395,7 +394,7 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha:0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -499,7 +498,7 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
                                           borderRadius: BorderRadius.circular(12),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
+                                              color: Colors.black.withValues(alpha:0.1),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
@@ -595,7 +594,7 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorOption.color.withOpacity(0.4),
+                                    color: colorOption.color.withValues(alpha:0.4),
                                     blurRadius: isSelected ? 12 : 6,
                                     spreadRadius: isSelected ? 2 : 0,
                                   ),
@@ -795,7 +794,7 @@ class SparklePainter extends CustomPainter {
     if (position == Offset.zero) return;
 
     final paint = Paint()
-      ..color = Colors.amber.withOpacity((1 - progress) * 0.6)
+      ..color = Colors.amber.withValues(alpha:(1 - progress) * 0.6)
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < 4; i++) {

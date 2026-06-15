@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import '../network/http_client.dart';
-import '../config/api_config.dart';
 import '../models/emergency_contact.dart';
 
 class EmergencyContactService {

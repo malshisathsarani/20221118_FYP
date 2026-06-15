@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'core/constants/app_colors.dart';
 import 'features/splash/screens/splash_screen.dart';
 import 'features/onboarding/screens/onboarding_screen.dart';
@@ -25,16 +24,14 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.light(
+        colorScheme: const ColorScheme.light(
           primary: AppColors.primary,
           secondary: AppColors.secondary,
           surface: AppColors.surface,
-          background: AppColors.background,
           error: AppColors.error,
           onPrimary: Colors.white,
           onSecondary: AppColors.textPrimary,
           onSurface: AppColors.textPrimary,
-          onBackground: AppColors.textPrimary,
           onError: Colors.white,
         ),
         scaffoldBackgroundColor: AppColors.background,
@@ -55,16 +52,14 @@ class MyApp extends StatelessWidget {
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.dark(
+        colorScheme: const ColorScheme.dark(
           primary: AppColors.primary,
           secondary: AppColors.secondary,
-          surface: const Color(0xFF1E293B),
-          background: const Color(0xFF0F172A),
+          surface: Color(0xFF1E293B),
           error: AppColors.error,
           onPrimary: Colors.white,
           onSecondary: Colors.white,
           onSurface: Colors.white,
-          onBackground: Colors.white,
           onError: Colors.white,
         ),
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 class CalmPuzzleScreen extends StatefulWidget {
   const CalmPuzzleScreen({super.key});
@@ -25,7 +25,7 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
   final List<Bubble> _bubbles = [];
 
   // Calming nature images
-  final List<PuzzleImage> images = [
+  final List<PuzzleImage> images = const [
     PuzzleImage(
       name: 'Ocean Waves',
       colors: [Color(0xFF84D2F6), Color(0xFF5AB0D9), Color(0xFF3F97C4), Color(0xFF2E7CA6)],
@@ -155,18 +155,18 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
               elevation: 0,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
                       Colors.white,
-                      Colors.purple.shade50,
+                      Color(0xFFF5F3FF),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.purple.withOpacity(0.3),
+                      color: Colors.purple.withValues(alpha:0.3),
                       blurRadius: 30,
                       spreadRadius: 10,
                     ),
@@ -268,8 +268,8 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.black87,
-                              side: BorderSide(
-                                color: Colors.grey.shade300,
+                              side: const BorderSide(
+                                color: Color(0xFFE5E7EB),
                                 width: 2,
                               ),
                               padding: const EdgeInsets.symmetric(
@@ -361,16 +361,16 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
         minChildSize: 0.4,
         maxChildSize: 0.9,
         builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
                 Colors.white,
-                Colors.purple.shade50,
+                Color(0xFFF5F3FF),
               ],
             ),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
           child: SingleChildScrollView(
             controller: scrollController,
@@ -435,14 +435,14 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: image.colors[0].withOpacity(0.5),
+                                      color: image.colors[0].withValues(alpha:0.5),
                                       blurRadius: 15,
                                       spreadRadius: 2,
                                     ),
                                   ]
                                 : [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(alpha:0.1),
                                       blurRadius: 8,
                                       spreadRadius: 1,
                                     ),
@@ -488,14 +488,14 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
         children: [
           // Gradient background
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.purple.shade50,
-                  Colors.blue.shade50,
-                  Colors.pink.shade50,
+                  Color(0xFFF5F3FF),
+                  Color(0xFFEBF8FF),
+                  Color(0xFFFCE7F3),
                 ],
               ),
             ),
@@ -536,11 +536,11 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha:0.9),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.purple.withOpacity(0.2 + _breatheController.value * 0.2),
+                                color: Colors.purple.withValues(alpha:0.2 + _breatheController.value * 0.2),
                                 blurRadius: 10 + _breatheController.value * 10,
                                 spreadRadius: 1,
                               ),
@@ -553,18 +553,18 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                                 Icons.self_improvement,
                                 size: 16 + _breatheController.value * 4,
                                 color: Color.lerp(
-                                  Colors.purple.shade300,
-                                  Colors.purple.shade600,
+                                  const Color(0xFFD8B4FE),
+                                  const Color(0xFF9333EA),
                                   _breatheController.value,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(
+                              const Text(
                                 'Breathe',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.purple.shade700,
+                                  color: Color(0xFF7C3AED),
                                 ),
                               ),
                             ],
@@ -599,16 +599,16 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: [
-                            Colors.purple.shade100,
-                            Colors.blue.shade100,
+                            Color(0xFFF3E8FF),
+                            Color(0xFFDBEAFE),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.purple.withOpacity(0.2),
+                            color: Colors.purple.withValues(alpha:0.2),
                             blurRadius: 10,
                             spreadRadius: 1,
                           ),
@@ -616,10 +616,10 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                       ),
                       child: Text(
                         'Moves: $moveCount',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Colors.purple.shade700,
+                          color: Color(0xFF7C3AED),
                         ),
                       ),
                     ),
@@ -638,11 +638,11 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha:0.9),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha:0.1),
                               blurRadius: 10,
                               spreadRadius: 1,
                             ),
@@ -659,10 +659,10 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   decoration: BoxDecoration(
                                     gradient: isSelected
-                                        ? LinearGradient(
+                                        ? const LinearGradient(
                                             colors: [
-                                              Colors.purple.shade400,
-                                              Colors.purple.shade600,
+                                              Color(0xFFC084FC),
+                                              Color(0xFF9333EA),
                                             ],
                                           )
                                         : null,
@@ -696,7 +696,7 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: images[selectedImageIndex].colors[0].withOpacity(0.4),
+                              color: images[selectedImageIndex].colors[0].withValues(alpha:0.4),
                               blurRadius: 10,
                               spreadRadius: 1,
                             ),
@@ -732,11 +732,11 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                             margin: const EdgeInsets.all(8),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha:0.9),
                               borderRadius: BorderRadius.circular(32),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.purple.withOpacity(0.2),
+                                  color: Colors.purple.withValues(alpha:0.2),
                                   blurRadius: 30,
                                   spreadRadius: 5,
                                 ),
@@ -766,33 +766,33 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                                         end: Alignment.bottomRight,
                                         colors: [
                                           piece.color,
-                                          piece.color.withOpacity(0.8),
+                                          piece.color.withValues(alpha:0.8),
                                         ],
                                       ),
                                       borderRadius: BorderRadius.circular(gridSize == 2 ? 20 : gridSize == 3 ? 16 : 12),
                                       border: isSelected
                                           ? Border.all(color: Colors.white, width: gridSize == 2 ? 4 : 3)
                                           : isCorrect && !isCompleted
-                                              ? Border.all(color: Colors.green.withOpacity(0.5), width: 2)
+                                              ? Border.all(color: Colors.green.withValues(alpha:0.5), width: 2)
                                               : null,
                                       boxShadow: isSelected
                                           ? [
                                               BoxShadow(
-                                                color: piece.color.withOpacity(0.6),
+                                                color: piece.color.withValues(alpha:0.6),
                                                 blurRadius: 20,
                                                 spreadRadius: 3,
                                               ),
                                             ]
                                           : [
                                               BoxShadow(
-                                                color: Colors.black.withOpacity(0.1),
+                                                color: Colors.black.withValues(alpha:0.1),
                                                 blurRadius: 8,
                                                 spreadRadius: 1,
                                               ),
                                             ],
                                     ),
                                     transform: Matrix4.identity()
-                                      ..scale(isSelected ? 0.95 : 1.0),
+                                      ..scaleByVector3(Vector3(isSelected ? 0.95 : 1.0, isSelected ? 0.95 : 1.0, 1.0)),
                                     child: LayoutBuilder(
                                       builder: (context, constraints) {
                                         final tileSize = constraints.maxWidth;
@@ -804,10 +804,10 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                                             width: circleSize,
                                             height: circleSize,
                                             decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.6),
+                                              color: Colors.white.withValues(alpha:0.6),
                                               shape: BoxShape.circle,
                                               border: Border.all(
-                                                color: Colors.white.withOpacity(0.9),
+                                                color: Colors.white.withValues(alpha:0.9),
                                                 width: gridSize == 4 ? 2 : 3,
                                               ),
                                             ),
@@ -826,12 +826,12 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                                                     height: 1.0,
                                                     shadows: [
                                                       Shadow(
-                                                        color: Colors.black.withOpacity(0.7),
+                                                        color: Colors.black.withValues(alpha:0.7),
                                                         blurRadius: 10,
                                                         offset: const Offset(2, 2),
                                                       ),
                                                       Shadow(
-                                                        color: Colors.black.withOpacity(0.5),
+                                                        color: Colors.black.withValues(alpha:0.5),
                                                         blurRadius: 6,
                                                         offset: const Offset(1, 1),
                                                       ),
@@ -867,10 +867,10 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
                         return LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Colors.purple.shade300,
-                            Colors.blue.shade300,
-                            Colors.pink.shade300,
+                          colors: const [
+                            Color(0xFFD8B4FE),
+                            Color(0xFF93C5FD),
+                            Color(0xFFF9A8D4),
                           ],
                           stops: [
                             _shimmerController.value - 0.3,
@@ -940,8 +940,8 @@ class BubblePainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            Colors.white.withOpacity(bubble.opacity),
-            Colors.white.withOpacity(bubble.opacity * 0.3),
+            Colors.white.withValues(alpha:bubble.opacity),
+            Colors.white.withValues(alpha:bubble.opacity * 0.3),
             Colors.transparent,
           ],
           stops: const [0.0, 0.7, 1.0],
@@ -956,7 +956,7 @@ class BubblePainter extends CustomPainter {
 
       // Draw bubble highlight
       final highlightPaint = Paint()
-        ..color = Colors.white.withOpacity(bubble.opacity * 0.6)
+        ..color = Colors.white.withValues(alpha:bubble.opacity * 0.6)
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(
@@ -988,7 +988,7 @@ class PuzzleImage {
   final List<Color> colors;
   final IconData icon;
 
-  PuzzleImage({
+  const PuzzleImage({
     required this.name,
     required this.colors,
     required this.icon,

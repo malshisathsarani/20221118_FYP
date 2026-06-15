@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/presentation/widgets/custom_app_bar.dart';
 import '../../../shared/presentation/widgets/bottom_nav_bar.dart';
-import '../../../core/constants/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,8 +31,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.05),
-                    const Color(0xFF4DB8A8).withOpacity(0.05),
+                    Theme.of(context).primaryColor.withValues(alpha:0.05),
+                    const Color(0xFF4DB8A8).withValues(alpha:0.05),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(12),
@@ -160,9 +159,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   side: const BorderSide(color: Color(0xFFDC2626)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.logout),
                     SizedBox(width: 8),
                     Text('Log out'),

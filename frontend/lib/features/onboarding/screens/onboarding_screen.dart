@@ -60,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.background,
         ),
         child: SafeArea(
@@ -92,7 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       width: 128,
                       height: 128,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        color: Theme.of(context).primaryColor.withValues(alpha:0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

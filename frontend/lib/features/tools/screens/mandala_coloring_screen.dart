@@ -301,7 +301,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                   child: Container(
                     decoration: BoxDecoration(
                       color: selectedDesign == design
-                          ? const Color(0xFF8B5CF6).withOpacity(0.1)
+                          ? const Color(0xFF8B5CF6).withValues(alpha:0.1)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
@@ -312,7 +312,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha:0.05),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -385,7 +385,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha:0.1),
                                 blurRadius: 10,
                               ),
                             ],
@@ -417,7 +417,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha:0.1),
                                   blurRadius: 10,
                                 ),
                               ],
@@ -439,7 +439,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha:0.1),
                                   blurRadius: 10,
                                 ),
                               ],
@@ -464,14 +464,14 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha:0.7),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.touch_app,
-                        color: const Color(0xFF8B5CF6).withOpacity(0.7),
+                        color: const Color(0xFF8B5CF6).withValues(alpha:0.7),
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -480,7 +480,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                           'Tap sections to color. Pinch to zoom. Double-tap to reset zoom.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: const Color(0xFF1F2937).withOpacity(0.8),
+                            color: const Color(0xFF1F2937).withValues(alpha:0.8),
                           ),
                         ),
                       ),
@@ -501,7 +501,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                          color: const Color(0xFF8B5CF6).withValues(alpha:0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -624,7 +624,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                                           borderRadius: BorderRadius.circular(12),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
+                                              color: Colors.black.withValues(alpha:0.1),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
@@ -660,7 +660,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha:0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
@@ -696,7 +696,7 @@ class _MandalaColoringScreenState extends State<MandalaColoringScreen>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorOption.color.withOpacity(0.4),
+                                    color: colorOption.color.withValues(alpha:0.4),
                                     blurRadius: isSelected ? 12 : 6,
                                     spreadRadius: isSelected ? 2 : 0,
                                   ),
@@ -889,7 +889,7 @@ class FlowerMandalaPainter extends CustomPainter {
       for (int segment = 0; segment < segments; segment++) {
         final sectionIndex = ring * segments + segment;
         final startAngle = (segment * 30 - 90) * math.pi / 180;
-        final sweepAngle = 30 * math.pi / 180;
+        const sweepAngle = 30 * math.pi / 180;
 
         final color = sectionColors[sectionIndex] ?? Colors.white;
 
@@ -920,7 +920,7 @@ class FlowerMandalaPainter extends CustomPainter {
     }
 
     // Center circle
-    final centerColor = sectionColors[-1] ?? const Color(0xFF8B5CF6).withOpacity(0.3);
+    final centerColor = sectionColors[-1] ?? const Color(0xFF8B5CF6).withValues(alpha:0.3);
     final centerPaint = Paint()
       ..color = centerColor
       ..style = PaintingStyle.fill;
@@ -934,7 +934,7 @@ class FlowerMandalaPainter extends CustomPainter {
       final y = center.dy + dotRadius * math.sin(angle);
 
       final dotPaint = Paint()
-        ..color = Colors.white.withOpacity(0.7)
+        ..color = Colors.white.withValues(alpha:0.7)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(x, y), 3, dotPaint);
     }
@@ -947,7 +947,7 @@ class FlowerMandalaPainter extends CustomPainter {
 
     // Outer border with glow
     final outerGlowPaint = Paint()
-      ..color = const Color(0xFF8B5CF6).withOpacity(0.1 + glowValue * 0.2)
+      ..color = const Color(0xFF8B5CF6).withValues(alpha:0.1 + glowValue * 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     canvas.drawCircle(center, maxRadius, outerGlowPaint);

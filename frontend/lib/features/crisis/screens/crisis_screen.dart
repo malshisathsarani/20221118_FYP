@@ -298,22 +298,22 @@ class _CrisisScreenState extends State<CrisisScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.error.withOpacity(0.3),
+                  color: AppColors.error.withValues(alpha:0.3),
                   width: 1,
                 ),
               ),
-              child: Column(
+              child: const Column(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.favorite,
                     color: AppColors.error,
                     size: 48,
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  SizedBox(height: 12),
+                  Text(
                     'You matter',
                     style: TextStyle(
                       fontSize: 24,
@@ -322,8 +322,8 @@ class _CrisisScreenState extends State<CrisisScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Text(
                     'If you\'re in crisis, please reach out. Help is available 24/7.',
                     style: TextStyle(
                       fontSize: 15,
@@ -351,9 +351,9 @@ class _CrisisScreenState extends State<CrisisScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.phone),
                     SizedBox(width: 8),
                     Text(
@@ -540,8 +540,8 @@ class _CrisisScreenState extends State<CrisisScreen> {
                         OutlinedButton(
                           onPressed: () =>
                               _handleCallClick(contact.name, contact.phone),
-                          child: Row(
-                            children: const [
+                          child: const Row(
+                            children: [
                               Icon(Icons.phone, size: 16),
                               SizedBox(width: 4),
                               Text('Call'),

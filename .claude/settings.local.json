@@ -7,7 +7,11 @@
       "Bash(mv mental-health-chatbot/frontend .)",
       "Bash(rmdir mental-health-chatbot)",
       "Bash(rm mental-health-chatbot/.gitignore)",
-      "Bash(tree -L 3 -d backend/app/)"
+      "Bash(tree -L 3 -d backend/app/)",
+      "Bash(flutter pub get)",
+      "Bash(flutter analyze)",
+      "Bash(dart fix --apply)",
+      "Bash(dart fix --dry-run)"
     ],
     "deny": [],
     "ask": []
