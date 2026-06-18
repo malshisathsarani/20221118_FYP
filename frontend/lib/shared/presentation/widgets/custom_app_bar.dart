@@ -5,6 +5,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? subtitle;
   final bool showAvatar;
   final VoidCallback? onAvatarTap;
+  final List<Widget>? actions;
 
   const CustomAppBar({
     super.key,
@@ -12,6 +13,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.subtitle,
     this.showAvatar = false,
     this.onAvatarTap,
+    this.actions,
   });
 
   @override
@@ -28,7 +30,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           Text(title),
         ],
       ),
-      actions: showAvatar
+      actions: actions ?? (showAvatar
           ? [
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
@@ -44,7 +46,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ]
-          : null,
+          : null),
     );
   }
 

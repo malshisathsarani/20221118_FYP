@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../../../core/models/game_tracking_model.dart';
+import '../../../core/services/game_tracking_service.dart';
 
 class BreathingBubbleScreen extends StatefulWidget {
   const BreathingBubbleScreen({super.key});
@@ -20,9 +22,14 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
   String _breathInstruction = 'Breathe with the bubble';
   bool _isPlaying = false;
 
+  final GameTrackingService _gameTrackingService = GameTrackingService();
+  GameSession? _currentSession;
+  DateTime? _sessionStartTime;
+
   @override
   void initState() {
     super.initState();
+    _startGameSession();
 
     // Main breathing animation
     _controller = AnimationController(
@@ -103,8 +110,37 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
     });
   }
 
+  Future<void> _startGameSession() async {
+    try {
+      _sessionStartTime = DateTime.now();
+      final session = await _gameTrackingService.startSession(
+        GameSessionStart(
+          gameType: 'breathing',
+          gameName: 'Breathing Bubble',
+        ),
+      );
+      _currentSession = session;
+    } catch (e) {
+      // Silently fail - tracking is optional
+    }
+  }
+
+  Future<void> _completeGameSession() async {
+    if (_currentSession == null) return;
+
+    try {
+      await _gameTrackingService.completeSession(
+        _currentSession!.id,
+        GameSessionComplete(),
+      );
+    } catch (e) {
+      // Silently fail - tracking is optional
+    }
+  }
+
   @override
   void dispose() {
+    _completeGameSession();
     _controller.dispose();
     _glowController.dispose();
     _particleController.dispose();

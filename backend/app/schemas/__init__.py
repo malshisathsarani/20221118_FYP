@@ -38,6 +38,18 @@ from .crisis import (
     CrisisHistoryResponse,
 )
 
+from .game_tracking import (
+    GameSessionStart,
+    GameSessionComplete,
+    GameSessionResponse,
+    ProgressSummary,
+    GameStats,
+    WeeklyActivity,
+    MoodTrends,
+    AchievementResponse,
+    SessionCompleteResponse,
+)
+
 __all__ = [
     # User schemas
     "UserBase",
@@ -69,4 +81,14 @@ __all__ = [
     "CrisisDetectionRequest",
     "CrisisDetectionResponse",
     "CrisisHistoryResponse",
+    # Game tracking schemas
+    "GameSessionStart",
+    "GameSessionComplete",
+    "GameSessionResponse",
+    "ProgressSummary",
+    "GameStats",
+    "WeeklyActivity",
+    "MoodTrends",
+    "AchievementResponse",
+    "SessionCompleteResponse",
 ]

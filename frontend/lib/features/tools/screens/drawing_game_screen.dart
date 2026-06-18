@@ -5,6 +5,8 @@ import 'dart:math' as math;
 import 'dart:convert';
 import '../../../core/services/artwork_service.dart';
 import '../../../core/models/artwork.dart';
+import '../../../core/models/game_tracking_model.dart';
+import '../../../core/services/game_tracking_service.dart';
 
 class DrawingGameScreen extends StatefulWidget {
   const DrawingGameScreen({super.key});
@@ -25,6 +27,10 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
   bool _isSaving = false;
   List<ArtworkThumbnail> _previousArtworks = [];
   bool _isLoadingGallery = true;
+
+  final GameTrackingService _gameTrackingService = GameTrackingService();
+  GameSession? _currentSession;
+  DateTime? _sessionStartTime;
 
   // Soft, calming pastel colors
   final List<ColorOption> availableColors = [
@@ -47,10 +53,40 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
       vsync: this,
     )..repeat();
     _loadPreviousArtworks();
+    _startGameSession();
+  }
+
+  Future<void> _startGameSession() async {
+    try {
+      _sessionStartTime = DateTime.now();
+      final session = await _gameTrackingService.startSession(
+        GameSessionStart(
+          gameType: 'drawing',
+          gameName: 'Drawing Canvas',
+        ),
+      );
+      _currentSession = session;
+    } catch (e) {
+      // Silently fail - tracking is optional
+    }
+  }
+
+  Future<void> _completeGameSession() async {
+    if (_currentSession == null) return;
+
+    try {
+      await _gameTrackingService.completeSession(
+        _currentSession!.id,
+        GameSessionComplete(),
+      );
+    } catch (e) {
+      // Silently fail - tracking is optional
+    }
   }
 
   @override
   void dispose() {
+    _completeGameSession();
     _sparkleController.dispose();
     super.dispose();
   }

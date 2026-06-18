@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart' show Vector3;
+import '../../../core/models/game_tracking_model.dart';
+import '../../../core/services/game_tracking_service.dart';
 
 class CalmPuzzleScreen extends StatefulWidget {
   const CalmPuzzleScreen({super.key});
@@ -23,6 +25,10 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
   String selectedDifficulty = 'Easy'; // Easy (2x2), Medium (3x3), Hard (4x4)
   int gridSize = 2;
   final List<Bubble> _bubbles = [];
+
+  final GameTrackingService _gameTrackingService = GameTrackingService();
+  GameSession? _currentSession;
+  DateTime? _sessionStartTime;
 
   // Calming nature images
   final List<PuzzleImage> images = const [
@@ -93,10 +99,40 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
     }
 
     _initializePuzzle();
+    _startGameSession();
+  }
+
+  Future<void> _startGameSession() async {
+    try {
+      _sessionStartTime = DateTime.now();
+      final session = await _gameTrackingService.startSession(
+        GameSessionStart(
+          gameType: 'puzzle',
+          gameName: 'Calm Puzzle',
+        ),
+      );
+      _currentSession = session;
+    } catch (e) {
+      // Silently fail - tracking is optional
+    }
+  }
+
+  Future<void> _completeGameSession() async {
+    if (_currentSession == null) return;
+
+    try {
+      await _gameTrackingService.completeSession(
+        _currentSession!.id,
+        GameSessionComplete(),
+      );
+    } catch (e) {
+      // Silently fail - tracking is optional
+    }
   }
 
   @override
   void dispose() {
+    _completeGameSession();
     _celebrationController.dispose();
     _breatheController.dispose();
     _shimmerController.dispose();
