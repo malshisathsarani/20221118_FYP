@@ -1,17 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter create --platforms=android,ios .)",
-      "Read(//mnt/c/Users/malsh/flutter/bin/**)",
-      "Bash(/mnt/c/Users/malsh/flutter/bin/flutter create --platforms=android,ios .)",
-      "Bash(mv mental-health-chatbot/frontend .)",
-      "Bash(rmdir mental-health-chatbot)",
-      "Bash(rm mental-health-chatbot/.gitignore)",
-      "Bash(tree -L 3 -d backend/app/)",
-      "Bash(flutter pub get)",
-      "Bash(flutter analyze)",
-      "Bash(dart fix --apply)",
-      "Bash(dart fix --dry-run)"
+      "Bash(rm /mnt/c/Users/malsh/OneDrive/Desktop/FYP/20221118_FYP/.gitignore)"
     ],
     "deny": [],
     "ask": []
