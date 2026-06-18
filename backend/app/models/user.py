@@ -23,3 +23,5 @@ class User(Base):
     feedback = relationship("Feedback", back_populates="user", cascade="all, delete-orphan")
     emergency_contacts = relationship("EmergencyContact", back_populates="user", cascade="all, delete-orphan")
     artworks = relationship("Artwork", back_populates="user", cascade="all, delete-orphan")
+    game_sessions = relationship("GameSession", back_populates="user", cascade="all, delete-orphan")
+    achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
