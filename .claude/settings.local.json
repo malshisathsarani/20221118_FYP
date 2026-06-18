@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(rm /mnt/c/Users/malsh/OneDrive/Desktop/FYP/20221118_FYP/.gitignore)",
-      "Bash(python3 migrate_game_tracking.py)"
+      "Bash(python3 migrate_game_tracking.py)",
+      "Bash(cat .env)",
+      "Bash(sqlite3 mental_health.db \".tables\")",
+      "Bash(docker run --name mental_health_postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=mental_health_2024 -e POSTGRES_DB=mental_health -p 5432:5432 -d postgres:15-alpine)",
+      "Bash(pip install psycopg2-binary)",
+      "Bash(./venv/Scripts/pip install psycopg2-binary)",
+      "Bash(python3 -c \"from app.core.database import engine; from sqlalchemy import text; conn = engine.connect(); result = conn.execute(text(''SELECT version()'')); print(''✅ PostgreSQL connected!''); print(f''Version: {result.fetchone()[0][:50]}...''); conn.close()\")"
     ],
     "deny": [],
     "ask": []
