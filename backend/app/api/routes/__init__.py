@@ -1,3 +1,3 @@
-from . import auth, chat, crisis, audio, emergency_contact, artwork
+from . import auth, chat, crisis, audio, emergency_contact, artwork, profile
 
-__all__ = ["auth", "chat", "crisis", "audio", "emergency_contact", "artwork"]
+__all__ = ["auth", "chat", "crisis", "audio", "emergency_contact", "artwork", "profile"]

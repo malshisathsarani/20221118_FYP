@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..core.database import Base
@@ -16,6 +16,19 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Profile fields
+    avatar_url = Column(String, nullable=True)  # URL or path to profile picture
+    phone_number = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
+
+    # Preferences
+    notifications_enabled = Column(Boolean, default=True)
+    email_notifications = Column(Boolean, default=True)
+
+    # Privacy settings
+    data_sharing_consent = Column(Boolean, default=False)
+    analytics_consent = Column(Boolean, default=False)
 
     # Relationships
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")

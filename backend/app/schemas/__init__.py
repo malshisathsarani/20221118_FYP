@@ -38,6 +38,15 @@ from .crisis import (
     CrisisHistoryResponse,
 )
 
+from .profile import (
+    ProfilePreferences,
+    ProfilePrivacySettings,
+    ProfileUpdate,
+    PreferencesUpdate,
+    PrivacySettingsUpdate,
+    ProfileResponse,
+)
+
 __all__ = [
     # User schemas
     "UserBase",
@@ -69,4 +78,11 @@ __all__ = [
     "CrisisDetectionRequest",
     "CrisisDetectionResponse",
     "CrisisHistoryResponse",
+    # Profile schemas
+    "ProfilePreferences",
+    "ProfilePrivacySettings",
+    "ProfileUpdate",
+    "PreferencesUpdate",
+    "PrivacySettingsUpdate",
+    "ProfileResponse",
 ]

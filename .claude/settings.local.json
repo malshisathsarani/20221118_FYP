@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(rm /mnt/c/Users/malsh/OneDrive/Desktop/FYP/20221118_FYP/.gitignore)"
+      "Bash(rm /mnt/c/Users/malsh/OneDrive/Desktop/FYP/20221118_FYP/.gitignore)",
+      "Bash(python -m uvicorn app.main:app --reload --port 8000)",
+      "Bash(python3 -m uvicorn app.main:app --reload --port 8000)",
+      "Bash(source venv/bin/activate)",
+      "Bash(./venv/Scripts/python -m uvicorn app.main:app --reload --port 8000)",
+      "Bash(python3 test_profile_api.py)",
+      "Bash(python3 migrate_profile_fields.py)"
     ],
     "deny": [],
     "ask": []

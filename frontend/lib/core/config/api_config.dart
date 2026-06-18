@@ -24,6 +24,16 @@ class ApiConfig {
   static const String uploadAudio = '$apiPrefix/audio/upload';
   static String deleteAudio(String audioId) => '$apiPrefix/audio/delete/$audioId';
 
+  // Profile endpoints
+  static const String getProfile = '$apiPrefix/profile/me';
+  static const String updateProfile = '$apiPrefix/profile/me';
+  static const String getPreferences = '$apiPrefix/profile/me/preferences';
+  static const String updatePreferences = '$apiPrefix/profile/me/preferences';
+  static const String getPrivacySettings = '$apiPrefix/profile/me/privacy';
+  static const String updatePrivacySettings = '$apiPrefix/profile/me/privacy';
+  static const String deleteAvatar = '$apiPrefix/profile/me/avatar';
+  static const String getInitials = '$apiPrefix/profile/me/initials';
+
   // Timeouts
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

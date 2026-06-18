@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .core.database import engine, Base
-from .api.routes import auth, chat, crisis, audio, emergency_contact, artwork
+from .api.routes import auth, chat, crisis, audio, emergency_contact, artwork, profile
 
 # Import all models to ensure they're registered with SQLAlchemy
 from .models import user, chat as chat_model, crisis as crisis_model, feedback, emergency_contact as emergency_contact_model, artwork as artwork_model
@@ -33,6 +33,7 @@ app.include_router(crisis.router, prefix="/api/crisis", tags=["Crisis"])
 app.include_router(audio.router, prefix="/api/audio", tags=["Audio"])
 app.include_router(emergency_contact.router, prefix="/api/emergency-contacts", tags=["Emergency Contacts"])
 app.include_router(artwork.router, tags=["Artworks"])
+app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
 
 
 @app.get("/")
