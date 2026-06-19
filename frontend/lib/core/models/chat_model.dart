@@ -5,6 +5,7 @@ class ChatMessage {
   final String response;
   final EmotionAnalysis? emotionAnalysis;
   final String? audioEmotion;
+  final String? audioUrl;
   final CrisisDetection? crisisDetection;
   final DateTime createdAt;
 
@@ -15,6 +16,7 @@ class ChatMessage {
     required this.response,
     this.emotionAnalysis,
     this.audioEmotion,
+    this.audioUrl,
     this.crisisDetection,
     required this.createdAt,
   });
@@ -29,6 +31,7 @@ class ChatMessage {
           ? EmotionAnalysis.fromJson(json['emotion_analysis'])
           : null,
       audioEmotion: json['audio_emotion'],
+      audioUrl: json['audio_url'] ?? json['audio_data'],
       crisisDetection: json['crisis_detection'] != null
           ? CrisisDetection.fromJson(json['crisis_detection'])
           : null,

@@ -4,6 +4,8 @@ import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/constants/app_colors.dart';
+import '../widgets/audio_recorder_widget.dart';
+import '../widgets/audio_message_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -21,6 +23,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   String? _sessionId;
   bool _isTyping = false;
   bool _showCrisisWarning = false;
+  String? _pendingAudioPath; // Store audio path for sending with message
 
   // Animation controllers
   AnimationController? _floatingController;
@@ -89,6 +92,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     required bool isUser,
     EmotionAnalysis? emotion,
     CrisisDetection? crisis,
+    String? audioUrl,
   }) {
     setState(() {
       _messages.add({
@@ -96,6 +100,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'isUser': isUser,
         'emotion': emotion,
         'crisis': crisis,
+        'audioUrl': audioUrl,
         'timestamp': DateTime.now(),
       });
     });
@@ -114,11 +119,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _sendMessage({String? audioPath}) async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _sessionId == null) return;
 
-    _addMessage(text: text, isUser: true);
+    _addMessage(text: text, isUser: true, audioUrl: audioPath);
     _messageController.clear();
     setState(() => _isTyping = true);
 
@@ -126,11 +131,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final chatMessage = await _chatService.sendMessage(
         sessionId: _sessionId!,
         message: text,
+        audioPath: audioPath, // Pass audio path for multi-modal analysis
       );
 
       setState(() {
         _isTyping = false;
         _showCrisisWarning = chatMessage.crisisDetection?.isCrisis ?? false;
+        _pendingAudioPath = null; // Clear pending audio
       });
 
       _addMessage(
@@ -138,6 +145,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         isUser: false,
         emotion: chatMessage.emotionAnalysis,
         crisis: chatMessage.crisisDetection,
+        audioUrl: chatMessage.audioUrl,
       );
     } catch (e) {
       setState(() => _isTyping = false);
@@ -145,6 +153,46 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send message: $e')),
         );
+      }
+    }
+  }
+
+  /// Handle audio recording completion
+  Future<void> _handleAudioRecorded(String audioPath) async {
+    // If there's text in the message field, send both text and audio
+    if (_messageController.text.trim().isNotEmpty) {
+      await _sendMessage(audioPath: audioPath);
+    } else {
+      // Audio-only message
+      _addMessage(text: '🎤 Voice message', isUser: true, audioUrl: audioPath);
+      setState(() => _isTyping = true);
+
+      try {
+        final chatMessage = await _chatService.sendMessage(
+          sessionId: _sessionId!,
+          message: 'Voice message', // Placeholder text
+          audioPath: audioPath,
+        );
+
+        setState(() {
+          _isTyping = false;
+          _showCrisisWarning = chatMessage.crisisDetection?.isCrisis ?? false;
+        });
+
+        _addMessage(
+          text: chatMessage.response,
+          isUser: false,
+          emotion: chatMessage.emotionAnalysis,
+          crisis: chatMessage.crisisDetection,
+          audioUrl: chatMessage.audioUrl,
+        );
+      } catch (e) {
+        setState(() => _isTyping = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to send audio: $e')),
+          );
+        }
       }
     }
   }
@@ -358,6 +406,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final text = message['text'] as String;
     final emotion = message['emotion'] as EmotionAnalysis?;
     final crisis = message['crisis'] as CrisisDetection?;
+    final audioUrl = message['audioUrl'] as String?;
     final currentTheme = _themes[_currentThemeIndex];
 
     return TweenAnimationBuilder<double>(
@@ -397,6 +446,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Audio player if audio URL exists
+              if (audioUrl != null && audioUrl.isNotEmpty) ...[
+                AudioMessageWidget(
+                  audioUrl: audioUrl,
+                  isUser: isUser,
+                ),
+                const SizedBox(height: 8),
+              ],
+              // Text message
               Text(
                 text,
                 style: TextStyle(
@@ -535,12 +593,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
+          // Audio recorder widget
+          AudioRecorderWidget(
+            onAudioRecorded: _handleAudioRecorded,
+          ),
+          const SizedBox(width: 8),
+
+          // Text input
           Expanded(
             child: TextField(
               controller: _messageController,
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
-                hintText: 'Type your message...',
+                hintText: 'Type or speak your message...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -556,8 +621,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(width: 8),
+
+          // Send button
           IconButton(
-            onPressed: _sendMessage,
+            onPressed: () => _sendMessage(),
             icon: const Icon(Icons.send),
             color: Theme.of(context).primaryColor,
             iconSize: 28,

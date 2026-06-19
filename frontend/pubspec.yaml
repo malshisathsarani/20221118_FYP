@@ -24,6 +24,7 @@ dependencies:
   # HTTP & API
   http: ^1.1.2
   dio: ^5.4.0
+  universal_html: ^2.2.4
 
   # Local Storage
   shared_preferences: ^2.2.2
@@ -31,6 +32,7 @@ dependencies:
 
   # Audio Recording & Playback
   audioplayers: ^5.2.1
+  record: ^5.0.4  # Audio recording
   path_provider: ^2.1.1
   permission_handler: ^11.1.0
 

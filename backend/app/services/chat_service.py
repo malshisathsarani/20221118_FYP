@@ -31,11 +31,23 @@ class ChatService:
 
     def process_message(self, user_id: int, chat_request: ChatRequest) -> ChatResponse:
         """Process a chat message with comprehensive ML analysis using unified pipeline"""
+        temp_audio_path = None
         try:
+            # Download audio from URL if provided
+            audio_path = None
+            if chat_request.audio_data:
+                from ..ml.shared.audio_utils import download_audio_from_url
+                temp_audio_path = download_audio_from_url(chat_request.audio_data)
+                if temp_audio_path:
+                    audio_path = temp_audio_path
+                    logger.info(f"Audio downloaded for processing: {audio_path}")
+                else:
+                    logger.warning("Failed to download audio, continuing with text-only analysis")
+
             # Run comprehensive analysis through unified pipeline
             analysis = self.ml_pipeline.analyze_comprehensive(
                 text=chat_request.message,
-                audio_path=chat_request.audio_data  # Will be file path when audio is uploaded
+                audio_path=audio_path  # Local file path for ML processing
             )
 
             # Extract results
@@ -106,6 +118,11 @@ class ChatService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error processing message: {str(e)}"
             )
+        finally:
+            # Cleanup temporary audio file
+            if temp_audio_path:
+                from ..ml.shared.audio_utils import cleanup_temp_audio
+                cleanup_temp_audio(temp_audio_path)
 
     def _retrieve_context(
         self,

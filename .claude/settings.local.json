@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(rm /mnt/c/Users/malsh/OneDrive/Desktop/FYP/20221118_FYP/.gitignore)",
-      "Bash(python3 migrate_game_tracking.py)"
+      "Bash(python3 migrate_game_tracking.py)",
+      "Bash(flutter clean)"
     ],
     "deny": [],
     "ask": []
