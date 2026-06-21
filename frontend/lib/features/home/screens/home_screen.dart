@@ -72,14 +72,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Scaffold(
       body: Stack(
         children: [
-          // Animated background
+          // Overlay gradient for better readability
           Container(
-            decoration: const BoxDecoration(
-              color: AppColors.background,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.background.withValues(alpha: 0.7),
+                  AppColors.background.withValues(alpha: 0.9),
+                ],
+              ),
             ),
+          ),
+          // Floating circles (optional - can be removed if too busy)
+          Container(
             child: Stack(
               children: [
-                // Floating circles
                 _buildFloatingCircle(0, top: 50, left: 30, size: 80),
                 _buildFloatingCircle(1, top: 150, right: 40, size: 60),
                 _buildFloatingCircle(2, bottom: 200, left: 50, size: 100),

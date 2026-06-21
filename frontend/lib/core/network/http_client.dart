@@ -70,7 +70,7 @@ class HttpClient {
 
     final response = await dio.post(
       ApiConfig.refreshToken,
-      data: {'refresh_token': refreshToken},
+      queryParameters: {'refresh_token': refreshToken},
     );
 
     if (response.statusCode == 200) {

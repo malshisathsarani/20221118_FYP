@@ -18,24 +18,42 @@ class ChatService:
         self.chat_repo = ChatRepository(db)
         self.ml_pipeline = get_unified_pipeline()
         self.use_rag = use_rag
+
+        logger.info(f"ChatService initializing with use_rag={use_rag}")
+
         if use_rag:
             try:
+                logger.info("Attempting to initialize RAG pipeline...")
                 self.rag_pipeline = get_rag_pipeline()
-                logger.info("RAG pipeline initialized successfully")
+                logger.info("✓ RAG pipeline initialized successfully in ChatService")
             except Exception as e:
-                logger.warning(f"RAG pipeline initialization failed: {e}. Continuing without RAG.")
+                logger.error(f"✗ RAG pipeline initialization failed: {e}", exc_info=True)
+                logger.warning("Continuing without RAG due to initialization failure")
                 self.use_rag = False
                 self.rag_pipeline = None
         else:
+            logger.info("RAG disabled by configuration")
             self.rag_pipeline = None
 
     def process_message(self, user_id: int, chat_request: ChatRequest) -> ChatResponse:
         """Process a chat message with comprehensive ML analysis using unified pipeline"""
+        temp_audio_path = None
         try:
+            # Download audio from URL if provided
+            audio_path = None
+            if chat_request.audio_data:
+                from ..ml.shared.audio_utils import download_audio_from_url
+                temp_audio_path = download_audio_from_url(chat_request.audio_data)
+                if temp_audio_path:
+                    audio_path = temp_audio_path
+                    logger.info(f"Audio downloaded for processing: {audio_path}")
+                else:
+                    logger.warning("Failed to download audio, continuing with text-only analysis")
+
             # Run comprehensive analysis through unified pipeline
             analysis = self.ml_pipeline.analyze_comprehensive(
                 text=chat_request.message,
-                audio_path=chat_request.audio_data  # Will be file path when audio is uploaded
+                audio_path=audio_path  # Local file path for ML processing
             )
 
             # Extract results
@@ -106,6 +124,11 @@ class ChatService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error processing message: {str(e)}"
             )
+        finally:
+            # Cleanup temporary audio file
+            if temp_audio_path:
+                from ..ml.shared.audio_utils import cleanup_temp_audio
+                cleanup_temp_audio(temp_audio_path)
 
     def _retrieve_context(
         self,

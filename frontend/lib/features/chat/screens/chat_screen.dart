@@ -4,6 +4,9 @@ import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/storage_helper.dart';
+import '../widgets/audio_recorder_widget.dart';
+import '../widgets/audio_message_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -21,6 +24,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   String? _sessionId;
   bool _isTyping = false;
   bool _showCrisisWarning = false;
+  String? _pendingAudioPath; // Store audio path for sending with message
 
   // Animation controllers
   AnimationController? _floatingController;
@@ -67,14 +71,68 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Future<void> _initializeChat() async {
     try {
-      final sessionId = await _chatService.createSession();
-      setState(() {
-        _sessionId = sessionId;
-      });
-      _addMessage(
-        text: 'Hello! I\'m here to support you. How are you feeling today?',
-        isUser: false,
-      );
+      // Try to load existing session ID
+      final savedSessionId = await StorageHelper.getCurrentSessionId();
+
+      if (savedSessionId != null) {
+        // Resume existing session
+        setState(() {
+          _sessionId = savedSessionId;
+        });
+
+        // Load chat history from backend
+        try {
+          final history = await _chatService.getChatHistory(sessionId: savedSessionId);
+
+          if (history.isNotEmpty) {
+            // Load previous messages
+            for (var chatMessage in history) {
+              // Add user message
+              _addMessage(
+                text: chatMessage.message,
+                isUser: true,
+                skipScroll: true,
+              );
+              // Add bot response
+              _addMessage(
+                text: chatMessage.response,
+                isUser: false,
+                emotion: chatMessage.emotionAnalysis,
+                crisis: chatMessage.crisisDetection,
+                audioUrl: chatMessage.audioUrl,
+                skipScroll: true,
+              );
+            }
+            // Scroll to bottom after loading all messages
+            Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+          } else {
+            // No history, show welcome back message
+            _addMessage(
+              text: 'Welcome back! How are you feeling?',
+              isUser: false,
+            );
+          }
+        } catch (e) {
+          print('Failed to load chat history: $e');
+          // If loading history fails, just show welcome message
+          _addMessage(
+            text: 'Welcome back! How are you feeling?',
+            isUser: false,
+          );
+        }
+      } else {
+        // Create new session
+        final sessionId = await _chatService.createSession();
+        setState(() {
+          _sessionId = sessionId;
+        });
+        // Save session ID for persistence
+        await StorageHelper.saveCurrentSessionId(sessionId);
+        _addMessage(
+          text: 'Hello! I\'m here to support you. How are you feeling today?',
+          isUser: false,
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,6 +147,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     required bool isUser,
     EmotionAnalysis? emotion,
     CrisisDetection? crisis,
+    String? audioUrl,
+    bool skipScroll = false,
   }) {
     setState(() {
       _messages.add({
@@ -96,10 +156,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'isUser': isUser,
         'emotion': emotion,
         'crisis': crisis,
+        'audioUrl': audioUrl,
         'timestamp': DateTime.now(),
       });
     });
-    _scrollToBottom();
+    if (!skipScroll) {
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -114,11 +177,57 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _startNewChat() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Start New Chat?'),
+        content: const Text(
+          'This will start a fresh conversation. Your current chat will be saved and you can access it later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Start New'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Clear current session
+        await StorageHelper.clearCurrentSession();
+
+        // Clear messages
+        setState(() {
+          _messages.clear();
+          _sessionId = null;
+          _showCrisisWarning = false;
+        });
+
+        // Initialize new chat
+        await _initializeChat();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to start new chat: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _sendMessage({String? audioPath}) async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _sessionId == null) return;
 
-    _addMessage(text: text, isUser: true);
+    _addMessage(text: text, isUser: true, audioUrl: audioPath);
     _messageController.clear();
     setState(() => _isTyping = true);
 
@@ -126,11 +235,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final chatMessage = await _chatService.sendMessage(
         sessionId: _sessionId!,
         message: text,
+        audioPath: audioPath, // Pass audio path for multi-modal analysis
       );
 
       setState(() {
         _isTyping = false;
         _showCrisisWarning = chatMessage.crisisDetection?.isCrisis ?? false;
+        _pendingAudioPath = null; // Clear pending audio
       });
 
       _addMessage(
@@ -138,6 +249,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         isUser: false,
         emotion: chatMessage.emotionAnalysis,
         crisis: chatMessage.crisisDetection,
+        audioUrl: chatMessage.audioUrl,
       );
     } catch (e) {
       setState(() => _isTyping = false);
@@ -145,6 +257,46 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send message: $e')),
         );
+      }
+    }
+  }
+
+  /// Handle audio recording completion
+  Future<void> _handleAudioRecorded(String audioPath) async {
+    // If there's text in the message field, send both text and audio
+    if (_messageController.text.trim().isNotEmpty) {
+      await _sendMessage(audioPath: audioPath);
+    } else {
+      // Audio-only message
+      _addMessage(text: '🎤 Voice message', isUser: true, audioUrl: audioPath);
+      setState(() => _isTyping = true);
+
+      try {
+        final chatMessage = await _chatService.sendMessage(
+          sessionId: _sessionId!,
+          message: 'Voice message', // Placeholder text
+          audioPath: audioPath,
+        );
+
+        setState(() {
+          _isTyping = false;
+          _showCrisisWarning = chatMessage.crisisDetection?.isCrisis ?? false;
+        });
+
+        _addMessage(
+          text: chatMessage.response,
+          isUser: false,
+          emotion: chatMessage.emotionAnalysis,
+          crisis: chatMessage.crisisDetection,
+          audioUrl: chatMessage.audioUrl,
+        );
+      } catch (e) {
+        setState(() => _isTyping = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to send audio: $e')),
+          );
+        }
       }
     }
   }
@@ -244,6 +396,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         title: 'Chat',
         subtitle: 'AI Mental Health Support',
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined, color: Colors.white),
+            onPressed: _startNewChat,
+            tooltip: 'New Chat',
+          ),
           IconButton(
             icon: const Icon(Icons.palette_outlined, color: Colors.white),
             onPressed: _showThemeSelector,
@@ -358,6 +515,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final text = message['text'] as String;
     final emotion = message['emotion'] as EmotionAnalysis?;
     final crisis = message['crisis'] as CrisisDetection?;
+    final audioUrl = message['audioUrl'] as String?;
     final currentTheme = _themes[_currentThemeIndex];
 
     return TweenAnimationBuilder<double>(
@@ -397,6 +555,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Audio player if audio URL exists
+              if (audioUrl != null && audioUrl.isNotEmpty) ...[
+                AudioMessageWidget(
+                  audioUrl: audioUrl,
+                  isUser: isUser,
+                ),
+                const SizedBox(height: 8),
+              ],
+              // Text message
               Text(
                 text,
                 style: TextStyle(
@@ -535,12 +702,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ),
       child: Row(
         children: [
+          // Audio recorder widget
+          AudioRecorderWidget(
+            onAudioRecorded: _handleAudioRecorded,
+          ),
+          const SizedBox(width: 8),
+
+          // Text input
           Expanded(
             child: TextField(
               controller: _messageController,
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
-                hintText: 'Type your message...',
+                hintText: 'Type or speak your message...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -556,8 +730,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(width: 8),
+
+          // Send button
           IconButton(
-            onPressed: _sendMessage,
+            onPressed: () => _sendMessage(),
             icon: const Icon(Icons.send),
             color: Theme.of(context).primaryColor,
             iconSize: 28,

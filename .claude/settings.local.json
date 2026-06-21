@@ -1,8 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(rm /mnt/c/Users/malsh/OneDrive/Desktop/FYP/20221118_FYP/.gitignore)",
-      "Bash(python3 migrate_game_tracking.py)"
+      "Bash(git config core.autocrlf)",
+      "Bash(git rm --cached backend/.env)",
+      "Bash(git rm --cached -r backend/app/__pycache__)",
+      "Bash(git rm --cached backend/*.db)",
+      "Bash(git rm --cached -r backend/app/ml/*/__pycache__ backend/app/ml/*/*/__pycache__)",
+      "Bash(git rm --cached -r \"backend/app/ml/crisis_detection/crisis_detector_model_2/checkpoint-*\")",
+      "Bash(git lfs version)",
+      "Bash(git config --global http.postBuffer 524288000)",
+      "Bash(git config --global http.lowSpeedLimit 0)",
+      "Bash(git config --global http.lowSpeedTime 999999)",
+      "Bash(git push --verbose origin features/voiceIntergration)",
+      "Bash(git ls-tree -r -l HEAD)",
+      "Bash(awk '{if ($4 > 10000000) print $4/1048576 \"\"\"\" MB\\t\"\"\"\" $5}')",
+      "Bash(git rm --cached backend/app/ml/crisis_detection/crisis_detector_model_2/model.safetensors backend/app/ml/crisis_detection/crisis_detector_model_2/tokenizer.json backend/app/ml/crisis_detection/crisis_detector_model_2/config.json)",
+      "Bash(git rm --cached -r backend/app/ml/rag/pretrained_models/)",
+      "Bash(git rm --cached -r backend/app/data/chroma_db/)"
     ],
     "deny": [],
     "ask": []

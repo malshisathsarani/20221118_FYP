@@ -6,6 +6,11 @@ from typing import List, Union
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from pathlib import Path
+import os
+
+# Disable HuggingFace Hub telemetry and force offline mode
+os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
 
 
 class EmbeddingService:
@@ -26,11 +31,36 @@ class EmbeddingService:
         self.model_name = model_name
         self.cache_dir = cache_dir or str(Path(__file__).parent.parent / "pretrained_models")
 
-        # Load the model
-        self.model = SentenceTransformer(
-            self.model_name,
-            cache_folder=self.cache_dir
+        # Load the model from local cache (no network calls)
+        import os
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Path to local cached model
+        local_model_path = os.path.join(
+            self.cache_dir,
+            f"models--sentence-transformers--{self.model_name}",
+            "snapshots",
+            "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"  # Snapshot hash
         )
+
+        try:
+            if os.path.exists(local_model_path):
+                # Load from local path directly (no HuggingFace network call)
+                logger.info(f"Loading sentence-transformer from local cache: {local_model_path}")
+                self.model = SentenceTransformer(local_model_path, device='cpu')
+                logger.info("✓ Sentence-transformer loaded successfully from cache")
+            else:
+                # Fallback to downloading (with local_files_only to prevent network errors)
+                logger.warning(f"Local model not found at {local_model_path}, attempting download...")
+                self.model = SentenceTransformer(
+                    self.model_name,
+                    cache_folder=self.cache_dir,
+                    device='cpu'
+                )
+        except Exception as e:
+            logger.error(f"Failed to load sentence-transformer: {e}")
+            raise
 
         # Handle both old and new versions of sentence-transformers
         try:
