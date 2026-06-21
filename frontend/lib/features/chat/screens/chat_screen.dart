@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import '../../../shared/presentation/widgets/custom_app_bar.dart';
 import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
+import '../../../core/services/emergency_alert_service.dart';
+import '../../../core/services/location_service.dart';
 import '../../../core/models/chat_model.dart';
+import '../../../core/models/emergency_contact.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
+import '../dialogs/emergency_confirmation_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -251,6 +255,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         crisis: chatMessage.crisisDetection,
         audioUrl: chatMessage.audioUrl,
       );
+
+      // Show emergency dialog for high/critical risk
+      if (chatMessage.crisisDetection?.isCrisis == true) {
+        _showEmergencyDialog(chatMessage.crisisDetection!, chatMessage.emotionAnalysis);
+      }
     } catch (e) {
       setState(() => _isTyping = false);
       if (mounted) {
@@ -290,6 +299,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           crisis: chatMessage.crisisDetection,
           audioUrl: chatMessage.audioUrl,
         );
+
+        // Show emergency dialog for high/critical risk
+        if (chatMessage.crisisDetection?.isCrisis == true) {
+          _showEmergencyDialog(chatMessage.crisisDetection!, chatMessage.emotionAnalysis);
+        }
       } catch (e) {
         setState(() => _isTyping = false);
         if (mounted) {
@@ -299,6 +313,123 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
     }
+  }
+
+  /// Show emergency confirmation dialog
+  Future<void> _showEmergencyDialog(CrisisDetection crisis, EmotionAnalysis? emotionAnalysis) async {
+    try {
+      // Get emergency contacts
+      final emergencyService = EmergencyAlertService();
+      final contacts = await emergencyService.getEmergencyContacts();
+
+      if (!mounted) return;
+
+      // Get user location
+      final locationService = LocationService();
+      final location = await locationService.getCurrentLocationWithTimeout();
+
+      if (!mounted) return;
+
+      // Show emergency dialog
+      final dialogResult = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false, // Cannot dismiss by tapping outside
+        builder: (context) => EmergencyConfirmationDialog(
+          riskScore: crisis.crisisScore,
+          crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
+          contacts: contacts,
+          countdownSeconds: 30,
+          onConfirm: (EmergencyContactModel contact) async {
+            // Send emergency alert
+            try {
+              final result = await emergencyService.sendEmergencyAlert(
+                contactId: contact.id!,
+                riskLevel: _getRiskLevel(crisis.crisisScore),
+                riskScore: crisis.crisisScore,
+                detectedEmotion: emotionAnalysis?.emotion ?? 'distressed',
+                crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
+                latitude: location?['latitude'],
+                longitude: location?['longitude'],
+                sendSms: true,
+                makeCall: crisis.crisisScore >= 0.85, // Call for critical only
+              );
+
+              // Return result to be shown after dialog is closed
+              Navigator.of(context).pop({
+                'success': result['success'],
+                'error': result['error'],
+                'contactName': contact.name,
+              });
+            } catch (e) {
+              // Return error to be shown after dialog is closed
+              Navigator.of(context).pop({
+                'success': false,
+                'error': e.toString(),
+                'contactName': contact.name,
+              });
+            }
+          },
+          onCancel: () {
+            Navigator.of(context).pop({'cancelled': true});
+          },
+        ),
+      );
+
+      // Show result after dialog is closed
+      if (!mounted) return;
+
+      if (dialogResult != null) {
+        if (dialogResult['cancelled'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Emergency alert cancelled'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else if (dialogResult['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Emergency alert sent to ${dialogResult['contactName']}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to send alert: ${dialogResult['error'] ?? 'Unknown error'}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error showing emergency dialog: $e');
+      // Optionally show a fallback message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to load emergency contacts. Please add contacts in settings.'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Settings',
+              textColor: Colors.white,
+              onPressed: () {
+                // Navigate to settings (you can implement this)
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  String _getRiskLevel(double crisisScore) {
+    if (crisisScore >= 0.85) return 'critical';
+    if (crisisScore >= 0.70) return 'high';
+    if (crisisScore >= 0.45) return 'moderate';
+    return 'low';
   }
 
   @override
