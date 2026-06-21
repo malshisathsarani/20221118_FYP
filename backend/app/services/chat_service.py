@@ -18,15 +18,21 @@ class ChatService:
         self.chat_repo = ChatRepository(db)
         self.ml_pipeline = get_unified_pipeline()
         self.use_rag = use_rag
+
+        logger.info(f"ChatService initializing with use_rag={use_rag}")
+
         if use_rag:
             try:
+                logger.info("Attempting to initialize RAG pipeline...")
                 self.rag_pipeline = get_rag_pipeline()
-                logger.info("RAG pipeline initialized successfully")
+                logger.info("✓ RAG pipeline initialized successfully in ChatService")
             except Exception as e:
-                logger.warning(f"RAG pipeline initialization failed: {e}. Continuing without RAG.")
+                logger.error(f"✗ RAG pipeline initialization failed: {e}", exc_info=True)
+                logger.warning("Continuing without RAG due to initialization failure")
                 self.use_rag = False
                 self.rag_pipeline = None
         else:
+            logger.info("RAG disabled by configuration")
             self.rag_pipeline = None
 
     def process_message(self, user_id: int, chat_request: ChatRequest) -> ChatResponse:

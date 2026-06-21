@@ -1,0 +1,29 @@
+# Auto detect text files and normalize line endings to LF in repository
+* text=auto
+
+# Explicitly set line endings for specific file types
+*.py text eol=lf
+*.dart text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.h5 binary
+*.pkl binary
+*.npy binary
+*.pt binary
+*.pth binary
+*.bin binary
+*.safetensors binary
+*.pb binary

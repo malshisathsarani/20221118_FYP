@@ -4,6 +4,7 @@ import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
 
@@ -70,14 +71,68 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Future<void> _initializeChat() async {
     try {
-      final sessionId = await _chatService.createSession();
-      setState(() {
-        _sessionId = sessionId;
-      });
-      _addMessage(
-        text: 'Hello! I\'m here to support you. How are you feeling today?',
-        isUser: false,
-      );
+      // Try to load existing session ID
+      final savedSessionId = await StorageHelper.getCurrentSessionId();
+
+      if (savedSessionId != null) {
+        // Resume existing session
+        setState(() {
+          _sessionId = savedSessionId;
+        });
+
+        // Load chat history from backend
+        try {
+          final history = await _chatService.getChatHistory(sessionId: savedSessionId);
+
+          if (history.isNotEmpty) {
+            // Load previous messages
+            for (var chatMessage in history) {
+              // Add user message
+              _addMessage(
+                text: chatMessage.message,
+                isUser: true,
+                skipScroll: true,
+              );
+              // Add bot response
+              _addMessage(
+                text: chatMessage.response,
+                isUser: false,
+                emotion: chatMessage.emotionAnalysis,
+                crisis: chatMessage.crisisDetection,
+                audioUrl: chatMessage.audioUrl,
+                skipScroll: true,
+              );
+            }
+            // Scroll to bottom after loading all messages
+            Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+          } else {
+            // No history, show welcome back message
+            _addMessage(
+              text: 'Welcome back! How are you feeling?',
+              isUser: false,
+            );
+          }
+        } catch (e) {
+          print('Failed to load chat history: $e');
+          // If loading history fails, just show welcome message
+          _addMessage(
+            text: 'Welcome back! How are you feeling?',
+            isUser: false,
+          );
+        }
+      } else {
+        // Create new session
+        final sessionId = await _chatService.createSession();
+        setState(() {
+          _sessionId = sessionId;
+        });
+        // Save session ID for persistence
+        await StorageHelper.saveCurrentSessionId(sessionId);
+        _addMessage(
+          text: 'Hello! I\'m here to support you. How are you feeling today?',
+          isUser: false,
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,6 +148,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     EmotionAnalysis? emotion,
     CrisisDetection? crisis,
     String? audioUrl,
+    bool skipScroll = false,
   }) {
     setState(() {
       _messages.add({
@@ -104,7 +160,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'timestamp': DateTime.now(),
       });
     });
-    _scrollToBottom();
+    if (!skipScroll) {
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -117,6 +175,52 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
     });
+  }
+
+  Future<void> _startNewChat() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Start New Chat?'),
+        content: const Text(
+          'This will start a fresh conversation. Your current chat will be saved and you can access it later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Start New'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Clear current session
+        await StorageHelper.clearCurrentSession();
+
+        // Clear messages
+        setState(() {
+          _messages.clear();
+          _sessionId = null;
+          _showCrisisWarning = false;
+        });
+
+        // Initialize new chat
+        await _initializeChat();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to start new chat: $e')),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _sendMessage({String? audioPath}) async {
@@ -292,6 +396,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         title: 'Chat',
         subtitle: 'AI Mental Health Support',
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_comment_outlined, color: Colors.white),
+            onPressed: _startNewChat,
+            tooltip: 'New Chat',
+          ),
           IconButton(
             icon: const Icon(Icons.palette_outlined, color: Colors.white),
             onPressed: _showThemeSelector,

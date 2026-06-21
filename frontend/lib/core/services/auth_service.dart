@@ -67,6 +67,8 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    // Clear session before clearing all storage
+    await StorageHelper.clearCurrentSession();
     await StorageHelper.clearAll();
   }
 

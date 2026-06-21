@@ -64,6 +64,22 @@ class StorageHelper {
     return prefs.getBool(AppConstants.keyHasSeenOnboarding) ?? false;
   }
 
+  // Chat session management
+  static Future<void> saveCurrentSessionId(String sessionId) async {
+    final prefs = await _prefs;
+    await prefs.setString('current_session_id', sessionId);
+  }
+
+  static Future<String?> getCurrentSessionId() async {
+    final prefs = await _prefs;
+    return prefs.getString('current_session_id');
+  }
+
+  static Future<void> clearCurrentSession() async {
+    final prefs = await _prefs;
+    await prefs.remove('current_session_id');
+  }
+
   // Clear all data
   static Future<void> clearAll() async {
     final prefs = await _prefs;

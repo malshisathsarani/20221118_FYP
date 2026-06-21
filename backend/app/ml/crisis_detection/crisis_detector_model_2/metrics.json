@@ -1,0 +1,15 @@
+{
+  "accuracy": 0.9716,
+  "precision": 0.9623529411764706,
+  "recall": 0.9816,
+  "f1_score": 0.9718811881188119,
+  "model": "distilbert-base-uncased",
+  "epochs": 3,
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "max_length": 128,
+  "train_samples": 40000,
+  "val_samples": 5000,
+  "test_samples": 5000,
+  "best_metric": "recall"
+}

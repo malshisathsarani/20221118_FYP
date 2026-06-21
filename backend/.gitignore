@@ -1,0 +1,97 @@
+# Python Backend .gitignore
+
+# Environment variables (CONTAINS API KEYS - NEVER COMMIT!)
+.env
+.env.local
+.env.production
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Database files (CRITICAL - contains user data!)
+*.db
+*.sqlite
+*.sqlite3
+mental_health.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ML Models and Large Files (Should use Git LFS or cloud storage)
+# Keep trained models but ignore intermediate checkpoints
+app/ml/crisis_detection/crisis_detector_model_2/checkpoint-*/
+app/ml/speech_emotion/speech_emotion/*.h5
+app/ml/speech_emotion/speech_emotion/*.pkl
+app/ml/speech_emotion/speech_emotion/*.npy
+app/ml/speech_emotion/speech_emotion/*.png
+app/ml/speech_emotion/speech_emotion/speech_emotion_model/
+app/ml/crisis_detection/crisis_detector_model_2/model.safetensors
+frontend/build/
+
+# RAG/Vector Database (regenerated from code)
+app/data/chroma_db/
+app/ml/rag/pretrained_models/models--*/
+
+# Keep these model files (but check size!)
+# !app/ml/crisis_detection/crisis_detector_model_2/model.safetensors
+# !app/ml/crisis_detection/crisis_detector_model_2/config.json
+
+# Cache
+.cache/
+*.cache
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Temporary audio files
+temp_audio/
+*.wav
+*.mp3
+*.m4a
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+logs/

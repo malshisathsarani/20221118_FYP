@@ -44,23 +44,37 @@ class RAGPipeline:
             chunk_overlap: Overlap between chunks
             retriever_type: Type of retriever ("semantic" or "hybrid")
         """
-        # Initialize components
-        self.embedding_service = get_embedding_service(model_name=embedding_model)
-        self.vector_store = get_vector_store(collection_name=collection_name)
-        self.retriever = create_retriever(
-            self.vector_store,
-            self.embedding_service,
-            retriever_type=retriever_type
-        )
+        logger.info(f"Initializing RAG Pipeline with model: {embedding_model}")
 
-        # Initialize utilities
-        self.chunker = DocumentChunker(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
-        )
-        self.context_builder = ContextBuilder()
+        try:
+            # Initialize components
+            logger.info("Loading embedding service...")
+            self.embedding_service = get_embedding_service(model_name=embedding_model)
+            logger.info("✓ Embedding service loaded")
 
-        logger.info(f"RAG Pipeline initialized with {embedding_model}")
+            logger.info("Loading vector store...")
+            self.vector_store = get_vector_store(collection_name=collection_name)
+            logger.info("✓ Vector store loaded")
+
+            logger.info("Creating retriever...")
+            self.retriever = create_retriever(
+                self.vector_store,
+                self.embedding_service,
+                retriever_type=retriever_type
+            )
+            logger.info("✓ Retriever created")
+
+            # Initialize utilities
+            self.chunker = DocumentChunker(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap
+            )
+            self.context_builder = ContextBuilder()
+
+            logger.info(f"✓ RAG Pipeline initialized successfully with {embedding_model}")
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG Pipeline: {e}")
+            raise
 
     def add_documents(
         self,

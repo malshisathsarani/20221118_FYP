@@ -26,7 +26,7 @@ class CrisisDetectionModel:
         if model_path is None:
             # Default path to trained model (Model 2: 97.16% accuracy, 98.16% recall)
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            model_path = os.path.join(base_dir, "pretrained_models", "crisis_detector", "crisis_detector_model_2")
+            model_path = os.path.join(base_dir, "crisis_detector_model_2")
 
         self.model_path = model_path
         self.threshold_high_risk = 0.75
@@ -34,15 +34,17 @@ class CrisisDetectionModel:
 
         try:
             logger.info(f"Loading crisis detection model from: {model_path}")
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+            self.model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
             self.model.eval()  # Set to evaluation mode
 
             # Use GPU if available
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model.to(self.device)
 
-            logger.info(f"Crisis detection model loaded successfully on {self.device}")
+            logger.info(f"✓ Crisis detection model loaded successfully on {self.device}")
+            logger.info(f"✓ Model path: {model_path}")
+            logger.info(f"✓ High-risk threshold: {self.threshold_high_risk}, Moderate-risk threshold: {self.threshold_moderate_risk}")
         except Exception as e:
             logger.error(f"Failed to load trained model: {str(e)}")
             logger.warning("Falling back to rule-based detection")
@@ -84,6 +86,12 @@ class CrisisDetectionModel:
                 probs = torch.softmax(outputs.logits, dim=-1)
                 prediction = torch.argmax(probs, dim=-1).item()
                 confidence = probs[0][prediction].item()
+
+                # Log for debugging
+                logger.info(f"Crisis detection - Text: '{text}'")
+                logger.info(f"Crisis detection - Logits: {outputs.logits}")
+                logger.info(f"Crisis detection - Probabilities: {probs}")
+                logger.info(f"Crisis detection - Prediction: {prediction}, Confidence: {confidence}")
 
             return {
                 "is_crisis": bool(prediction == 1),
