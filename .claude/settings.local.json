@@ -16,7 +16,11 @@
       "Bash(awk '{if ($4 > 10000000) print $4/1048576 \"\"\"\" MB\\t\"\"\"\" $5}')",
       "Bash(git rm --cached backend/app/ml/crisis_detection/crisis_detector_model_2/model.safetensors backend/app/ml/crisis_detection/crisis_detector_model_2/tokenizer.json backend/app/ml/crisis_detection/crisis_detector_model_2/config.json)",
       "Bash(git rm --cached -r backend/app/ml/rag/pretrained_models/)",
-      "Bash(git rm --cached -r backend/app/data/chroma_db/)"
+      "Bash(git rm --cached -r backend/app/data/chroma_db/)",
+      "Bash(flutter pub get)",
+      "Bash(cat .env)",
+      "Bash(sqlite3 mental_health.db \"SELECT id, name, phone FROM emergency_contacts;\")",
+      "Bash(xargs ls -la)"
     ],
     "deny": [],
     "ask": []
