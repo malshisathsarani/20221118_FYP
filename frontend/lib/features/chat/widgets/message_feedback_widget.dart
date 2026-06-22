@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/feedback_service.dart';
+import '../../../core/models/feedback_model.dart';
 
 typedef FeedbackCallback = void Function(bool helpful, String? comment);
 
 class MessageFeedbackWidget extends StatefulWidget {
-  final int messageId;
-  final FeedbackCallback onFeedback;
+  final int chatId;
+  final FeedbackCallback? onFeedback;
   final bool isVisible;
 
   const MessageFeedbackWidget({
     super.key,
-    required this.messageId,
-    required this.onFeedback,
+    required this.chatId,
+    this.onFeedback,
     this.isVisible = true,
   });
 
@@ -19,11 +21,13 @@ class MessageFeedbackWidget extends StatefulWidget {
 }
 
 class _MessageFeedbackWidgetState extends State<MessageFeedbackWidget> {
+  final FeedbackService _feedbackService = FeedbackService();
   bool? _selectedFeedback;
   bool _showCommentField = false;
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
   bool _isSubmitted = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -43,43 +47,57 @@ class _MessageFeedbackWidgetState extends State<MessageFeedbackWidget> {
 
     setState(() {
       _isSubmitting = true;
+      _errorMessage = null;
     });
 
-    // Call the feedback callback
-    widget.onFeedback(
-      _selectedFeedback!,
-      _showCommentField ? _commentController.text.trim() : null,
-    );
-
-    // Show confirmation
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-        _isSubmitted = true;
-      });
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✓ Thanks for your feedback!'),
-          duration: Duration(seconds: 2),
-          backgroundColor: Color(0xFF4CAF50),
-        ),
+    try {
+      // Submit feedback to backend
+      await _feedbackService.submitFeedback(
+        chatId: widget.chatId,
+        rating: _selectedFeedback! ? 5 : 1, // 5 for helpful, 1 for unhelpful
+        feedbackType: FeedbackType.responseQuality,
+        comment: _showCommentField ? _commentController.text.trim() : null,
       );
 
-      // Reset after 2 seconds
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _selectedFeedback = null;
-            _showCommentField = false;
-            _commentController.clear();
-            _isSubmitted = false;
-          });
-        }
-      });
+      // Call optional callback
+      if (widget.onFeedback != null) {
+        widget.onFeedback!(
+          _selectedFeedback!,
+          _showCommentField ? _commentController.text.trim() : null,
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _isSubmitted = true;
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Thanks for your feedback!'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
+
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit feedback: $_errorMessage'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
     }
   }
 
@@ -91,56 +109,62 @@ class _MessageFeedbackWidgetState extends State<MessageFeedbackWidget> {
 
     if (_isSubmitted) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          '✓ Feedback received',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.green.shade600,
-            fontStyle: FontStyle.italic,
-          ),
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, size: 14, color: Colors.green.shade600),
+            const SizedBox(width: 6),
+            Text(
+              'Thanks for your feedback!',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(top: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Feedback question
-          Text(
-            'Was this response helpful?',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade700,
-                ),
-          ),
-          const SizedBox(height: 8),
-
-          // Feedback buttons
+          // Feedback buttons with question
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
+              Text(
+                'Helpful?',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 10),
+
               // Yes button
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : () => _handleFeedback(true),
-                  icon: const Icon(Icons.thumb_up_outlined, size: 16),
-                  label: const Text('Yes', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _selectedFeedback == true
-                        ? Colors.green.shade500
-                        : Colors.grey.shade300,
-                    foregroundColor: _selectedFeedback == true
-                        ? Colors.white
-                        : Colors.grey.shade700,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isSubmitting ? null : () => _handleFeedback(true),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _selectedFeedback == true
+                          ? const Color(0xFF10B981)
+                          : Colors.grey.shade100,
+                      shape: BoxShape.circle,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                    child: Icon(
+                      Icons.thumb_up_rounded,
+                      size: 16,
+                      color: _selectedFeedback == true
+                          ? Colors.white
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ),
@@ -148,107 +172,115 @@ class _MessageFeedbackWidgetState extends State<MessageFeedbackWidget> {
               const SizedBox(width: 8),
 
               // No button
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed:
-                      _isSubmitting ? null : () => _handleFeedback(false),
-                  icon: const Icon(Icons.thumb_down_outlined, size: 16),
-                  label: const Text('No', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _selectedFeedback == false
-                        ? Colors.red.shade500
-                        : Colors.grey.shade300,
-                    foregroundColor: _selectedFeedback == false
-                        ? Colors.white
-                        : Colors.grey.shade700,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isSubmitting ? null : () => _handleFeedback(false),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _selectedFeedback == false
+                          ? const Color(0xFFEF4444)
+                          : Colors.grey.shade100,
+                      shape: BoxShape.circle,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                    child: Icon(
+                      Icons.thumb_down_rounded,
+                      size: 16,
+                      color: _selectedFeedback == false
+                          ? Colors.white
+                          : Colors.grey.shade600,
                     ),
                   ),
                 ),
               ),
+
+              // Submit button inline (only show if feedback selected)
+              if (_selectedFeedback != null) ...[
+                const SizedBox(width: 12),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _isSubmitting ? null : _submitFeedback,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _isSubmitting
+                          ? SizedBox(
+                              width: 10,
+                              height: 10,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                              ),
+                            )
+                          : Text(
+                              'Submit',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 
           // Comment field (only show if "No" selected)
           if (_showCommentField) ...[
-            const SizedBox(height: 8),
-            TextField(
-              controller: _commentController,
-              decoration: InputDecoration(
-                hintText: 'Tell us what could be better...',
-                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.grey.shade300,
+                  width: 1,
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF1A695C),
-                    width: 2,
-                  ),
-                ),
-                suffixIcon: _commentController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 16),
-                        onPressed: () {
-                          setState(() {
-                            _commentController.clear();
-                          });
-                        },
-                      )
-                    : null,
               ),
-              maxLines: 2,
-              minLines: 1,
-              maxLength: 200,
-              onChanged: (value) {
-                setState(() {}); // Rebuild to update suffix icon
-              },
-            ),
-          ],
-
-          // Submit button (only show if feedback selected)
-          if (_selectedFeedback != null) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitFeedback,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A695C),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
+              child: TextField(
+                controller: _commentController,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'What could be better?',
+                  hintStyle: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade400,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                  border: InputBorder.none,
+                  counterStyle: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey.shade500,
                   ),
+                  isDense: true,
                 ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Text(
-                        'Submit',
-                        style: TextStyle(fontSize: 12),
-                      ),
+                maxLines: 2,
+                maxLength: 200,
+                onChanged: (value) {
+                  setState(() {});
+                },
               ),
             ),
           ],

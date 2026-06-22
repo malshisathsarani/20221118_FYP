@@ -19,6 +19,10 @@ class ChatService:
         self.ml_pipeline = get_unified_pipeline()
         self.use_rag = use_rag
 
+        # Initialize user preference learning service
+        from ..services.user_preference_service import UserPreferenceService
+        self.preference_service = UserPreferenceService(db)
+
         logger.info(f"ChatService initializing with use_rag={use_rag}")
 
         if use_rag:
@@ -61,6 +65,25 @@ class ChatService:
             speech_emotion = analysis.get('speech_emotion')
             crisis_assessment = analysis.get('crisis_assessment', {})
             fusion_result = analysis.get('fusion_result', {})
+
+            # 🎯 APPLY USER FEEDBACK LEARNING
+            # Adjust emotion based on user's past feedback corrections
+            detected_emotion = fusion_result.get('dominant_emotion', 'neutral')
+            emotion_confidence = fusion_result.get('dominant_emotion_confidence', 0.0)
+
+            adjusted_emotion, adjusted_confidence, was_corrected = \
+                self.preference_service.adjust_emotion_for_user(
+                    user_id=user_id,
+                    detected_emotion=detected_emotion,
+                    confidence=emotion_confidence
+                )
+
+            if was_corrected:
+                logger.info(f"✓ Emotion corrected for user {user_id}: {detected_emotion} -> {adjusted_emotion} (based on feedback)")
+                # Update fusion result with corrected emotion
+                fusion_result['dominant_emotion'] = adjusted_emotion
+                fusion_result['dominant_emotion_confidence'] = adjusted_confidence
+                fusion_result['feedback_corrected'] = True
 
             # Retrieve relevant context using RAG if enabled
             rag_context = None

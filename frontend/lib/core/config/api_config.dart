@@ -24,6 +24,12 @@ class ApiConfig {
   static const String uploadAudio = '$apiPrefix/audio/upload';
   static String deleteAudio(String audioId) => '$apiPrefix/audio/delete/$audioId';
 
+  // Feedback endpoints
+  static const String submitFeedback = '$apiPrefix/feedback/';
+  static const String getMyFeedbacks = '$apiPrefix/feedback/my-feedbacks';
+  static const String getBiasAnalysis = '$apiPrefix/feedback/bias-analysis';
+  static const String getFeedbackStats = '$apiPrefix/feedback/stats';
+
   // Timeouts
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

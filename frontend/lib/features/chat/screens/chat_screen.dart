@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
+import '../widgets/message_feedback_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -97,6 +98,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               _addMessage(
                 text: chatMessage.response,
                 isUser: false,
+                chatId: chatMessage.id,
                 emotion: chatMessage.emotionAnalysis,
                 crisis: chatMessage.crisisDetection,
                 audioUrl: chatMessage.audioUrl,
@@ -148,6 +150,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     EmotionAnalysis? emotion,
     CrisisDetection? crisis,
     String? audioUrl,
+    int? chatId,
     bool skipScroll = false,
   }) {
     setState(() {
@@ -158,6 +161,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'crisis': crisis,
         'audioUrl': audioUrl,
         'timestamp': DateTime.now(),
+        'chatId': chatId,
       });
     });
     if (!skipScroll) {
@@ -247,6 +251,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _addMessage(
         text: chatMessage.response,
         isUser: false,
+        chatId: chatMessage.id,
         emotion: chatMessage.emotionAnalysis,
         crisis: chatMessage.crisisDetection,
         audioUrl: chatMessage.audioUrl,
@@ -516,6 +521,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final emotion = message['emotion'] as EmotionAnalysis?;
     final crisis = message['crisis'] as CrisisDetection?;
     final audioUrl = message['audioUrl'] as String?;
+    final chatId = message['chatId'] as int?;
     final currentTheme = _themes[_currentThemeIndex];
 
     return TweenAnimationBuilder<double>(
@@ -614,6 +620,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
+              ),
+            ],
+            // Add feedback widget for bot messages
+            if (!isUser && chatId != null) ...[
+              const SizedBox(height: 12),
+              MessageFeedbackWidget(
+                chatId: chatId,
+                isVisible: true,
               ),
             ],
           ],
