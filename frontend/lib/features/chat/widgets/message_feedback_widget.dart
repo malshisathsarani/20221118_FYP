@@ -122,7 +122,7 @@ class _MessageFeedbackWidgetState extends State<MessageFeedbackWidget> {
         _showThanks = true;
       });
 
-      // Hide after 2 seconds
+      // Hide after 2 seconds and stay hidden permanently
       await Future.delayed(const Duration(seconds: 2));
 
       if (mounted) {
@@ -130,15 +130,6 @@ class _MessageFeedbackWidgetState extends State<MessageFeedbackWidget> {
           _showThanks = false;
           _isSubmitted = true;
         });
-
-        // Show again after 3 seconds
-        await Future.delayed(const Duration(seconds: 3));
-
-        if (mounted) {
-          setState(() {
-            _isSubmitted = false;
-          });
-        }
       }
     }
   }

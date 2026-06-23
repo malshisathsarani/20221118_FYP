@@ -130,8 +130,13 @@ class ChatService:
                         crisis_level=crisis_assessment.get('risk_level', 'none'),
                         emotion=fusion_result.get('dominant_emotion', 'neutral')
                     )
-                    rag_context = rag_response.get('context')
-                    rag_sources = rag_response.get('sources', [])
+                    # Only use context if it wasn't skipped and is actually present
+                    if rag_response.get('context') and not rag_response.get('skipped'):
+                        rag_context = rag_response.get('context')
+                        rag_sources = rag_response.get('sources', [])
+                    else:
+                        if rag_response.get('skipped'):
+                            logger.info(f"RAG skipped: {rag_response.get('skipped')}")
                 except Exception as e:
                     logger.warning(f"RAG retrieval failed: {e}")
 
@@ -200,6 +205,83 @@ class ChatService:
                 from ..ml.shared.audio_utils import cleanup_temp_audio
                 cleanup_temp_audio(temp_audio_path)
 
+    def _is_casual_message(self, message: str) -> bool:
+        """
+        Detect if message is casual conversation that doesn't need RAG context
+
+        Args:
+            message: User message
+
+        Returns:
+            True if casual/greeting, False if needs mental health support
+        """
+        message_lower = message.lower().strip()
+
+        # Simple greetings
+        greetings = [
+            'hi', 'hello', 'hey', 'good morning', 'good afternoon',
+            'good evening', 'howdy', 'greetings', 'what\'s up', 'whats up',
+            'sup', 'yo', 'hiya'
+        ]
+
+        # Check if entire message is just a greeting
+        if message_lower in greetings:
+            return True
+
+        # Check if message is very short greeting-like
+        words = message_lower.split()
+        if len(words) <= 3 and any(greet in message_lower for greet in greetings):
+            # Exclude if it contains distress signals even in short messages
+            distress_signals = ['not', 'bad', 'sad', 'help', 'depressed', 'anxious', 'worried']
+            if not any(signal in message_lower for signal in distress_signals):
+                return True
+
+        # Casual acknowledgments
+        casual_phrases = [
+            'ok', 'okay', 'thanks', 'thank you', 'yes', 'no', 'yeah', 'nah',
+            'sure', 'alright', 'cool', 'nice', 'good', 'great'
+        ]
+
+        if len(words) <= 2 and message_lower in casual_phrases:
+            return True
+
+        return False
+
+    def _is_help_seeking_question(self, message: str) -> bool:
+        """
+        Detect if user is explicitly asking for techniques, advice, or help
+
+        Args:
+            message: User message
+
+        Returns:
+            True if user is asking for help/techniques/advice
+        """
+        message_lower = message.lower()
+
+        # Question indicators
+        help_seeking_patterns = [
+            'can you', 'could you', 'can u', 'would you',
+            'how to', 'how can', 'how do', 'what can',
+            'give me', 'share', 'tell me', 'suggest', 'recommend',
+            'any tips', 'any advice', 'any techniques', 'any ways',
+            'help me', 'show me', 'teach me', 'what should',
+        ]
+
+        # Help topics
+        help_topics = [
+            'technique', 'method', 'strategy', 'way', 'tips', 'advice',
+            'exercise', 'practice', 'cope', 'deal with', 'manage',
+            'relax', 'calm', 'feel better', 'reduce', 'handle',
+            'overcome', 'stop', 'prevent', 'avoid'
+        ]
+
+        # Check if message contains help-seeking patterns
+        has_help_pattern = any(pattern in message_lower for pattern in help_seeking_patterns)
+        has_help_topic = any(topic in message_lower for topic in help_topics)
+
+        return has_help_pattern and has_help_topic
+
     def _retrieve_context(
         self,
         message: str,
@@ -215,8 +297,18 @@ class ChatService:
             emotion: Detected emotion
 
         Returns:
-            Dict with context and sources
+            Dict with context and sources (or None if not relevant)
         """
+        # Skip RAG for casual messages
+        if self._is_casual_message(message):
+            return {
+                "context": None,
+                "sources": [],
+                "num_retrieved": 0,
+                "avg_score": 0.0,
+                "skipped": "casual_conversation"
+            }
+
         # Determine category filter based on crisis level and emotion
         metadata_filter = None
         if crisis_level in ['high', 'critical']:
@@ -235,6 +327,34 @@ class ChatService:
             use_diversity=True
         )
 
+        # Check relevance threshold
+        avg_score = rag_response.metadata["avg_score"]
+
+        # Check if this is a help-seeking question
+        is_help_seeking = self._is_help_seeking_question(message)
+
+        # Minimum relevance thresholds based on context
+        if crisis_level in ['high', 'critical']:
+            min_score = 0.3  # Lower threshold for crisis - we want to provide help
+        elif is_help_seeking:
+            min_score = 0.35  # Low threshold for explicit help requests - user wants techniques
+            logger.info(f"Help-seeking question detected - using lower RAG threshold ({min_score})")
+        elif emotion in ['sadness', 'fear', 'anger']:
+            min_score = 0.45  # Moderate threshold for negative emotions
+        else:
+            min_score = 0.6  # Higher threshold for neutral/positive - only truly relevant content
+
+        # Skip RAG if relevance too low
+        if avg_score < min_score:
+            logger.info(f"RAG skipped - low relevance score {avg_score:.3f} < {min_score}")
+            return {
+                "context": None,
+                "sources": [],
+                "num_retrieved": 0,
+                "avg_score": avg_score,
+                "skipped": "low_relevance"
+            }
+
         # Extract sources
         sources = [
             {
@@ -246,11 +366,13 @@ class ChatService:
             for doc in rag_response.retrieved_docs
         ]
 
+        logger.info(f"RAG retrieved {len(sources)} docs with avg score {avg_score:.3f}")
+
         return {
             "context": rag_response.context,
             "sources": sources,
             "num_retrieved": rag_response.metadata["num_retrieved"],
-            "avg_score": round(rag_response.metadata["avg_score"], 3)
+            "avg_score": round(avg_score, 3)
         }
 
     def _map_risk_to_crisis_level(self, risk_level: str) -> int:

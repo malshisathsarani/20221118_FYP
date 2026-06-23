@@ -3,7 +3,10 @@
     "allow": [
       "Bash(pip3 list)",
       "Bash(python -c \"from app.core.config import settings; print(f''Token (last 20 chars): ...{settings.WHATSAPP_ACCESS_TOKEN[-20:]}'')\")",
-      "Bash(python3 -c \"from app.core.config import settings; print(f''Token (last 20 chars): ...{settings.WHATSAPP_ACCESS_TOKEN[-20:]}'')\")"
+      "Bash(python3 -c \"from app.core.config import settings; print(f''Token (last 20 chars): ...{settings.WHATSAPP_ACCESS_TOKEN[-20:]}'')\")",
+      "Bash(python test_rag_fix.py)",
+      "Bash(python3 test_rag_fix.py)",
+      "Bash(python3 test_rag_simple.py)"
     ],
     "deny": [],
     "ask": []
