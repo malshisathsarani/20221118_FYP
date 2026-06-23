@@ -706,25 +706,6 @@ class _CrisisScreenState extends State<CrisisScreen> {
                               ),
                             ),
                           ),
-                        OutlinedButton(
-                          onPressed: () =>
-                              _handleCallClick(contact.name, contact.phone),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.phone, size: 16),
-                              SizedBox(width: 4),
-                              Text('Call'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.delete_outline,
                               color: AppColors.error),
