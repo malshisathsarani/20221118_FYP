@@ -135,41 +135,82 @@ class _CrisisScreenState extends State<CrisisScreen> {
               children: [
                 TextField(
                   controller: nameController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Name *',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'e.g., Mom, Dr. Smith',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: phoneController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Phone Number *',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'e.g., (555) 123-4567',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: relationshipController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Relationship',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'e.g., Family, Therapist, Friend',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: emailController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Email (Optional)',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'contact@example.com',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 12),
                 CheckboxListTile(
-                  title: const Text('Set as Primary Contact'),
+                  title: const Text(
+                    'Set as Primary Contact',
+                    style: TextStyle(color: AppColors.textPrimary),
+                  ),
                   value: isPrimary,
+                  activeColor: AppColors.primary,
+                  checkColor: Colors.white,
                   onChanged: (value) {
                     setDialogState(() {
                       isPrimary = value ?? false;
