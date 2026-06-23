@@ -23,7 +23,7 @@ class LocationService {
       // Check if location services are enabled
       bool serviceEnabled = await isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('Location services are disabled');
+        // Location services are disabled
         return null;
       }
 
@@ -33,13 +33,13 @@ class LocationService {
       if (permission == LocationPermission.denied) {
         permission = await requestPermission();
         if (permission == LocationPermission.denied) {
-          print('Location permission denied');
+          // Location permission denied
           return null;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('Location permissions are permanently denied');
+        // Location permissions are permanently denied
         return null;
       }
 
@@ -54,7 +54,7 @@ class LocationService {
         'longitude': position.longitude,
       };
     } catch (e) {
-      print('Error getting location: $e');
+      // Error getting location: $e
       return null;
     }
   }
@@ -68,13 +68,13 @@ class LocationService {
       final location = await getCurrentLocation().timeout(
         timeout,
         onTimeout: () {
-          print('Location request timed out');
+          // Location request timed out
           return null;
         },
       );
       return location;
     } catch (e) {
-      print('Error getting location: $e');
+      // Error getting location: $e
       return null;
     }
   }

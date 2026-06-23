@@ -3,6 +3,7 @@ from typing import Optional, Dict, List, Any
 from ..repositories.chat_repo import ChatRepository
 from ..ml.unified_pipeline import get_unified_pipeline
 from ..ml.rag import get_rag_pipeline
+from ..ml.bias_reduction.bias_correction_algorithm import BiasReductionAlgorithm
 from ..schemas.chat import ChatRequest, ChatResponse, EmotionAnalysis, CrisisDetection
 from fastapi import HTTPException, status
 import logging
@@ -18,6 +19,14 @@ class ChatService:
         self.chat_repo = ChatRepository(db)
         self.ml_pipeline = get_unified_pipeline()
         self.use_rag = use_rag
+
+        # Initialize bias reduction algorithm
+        try:
+            self.bias_reducer = BiasReductionAlgorithm(db)
+            logger.info("✓ Bias reduction algorithm initialized")
+        except Exception as e:
+            logger.warning(f"Bias reduction initialization failed: {e}")
+            self.bias_reducer = None
 
         logger.info(f"ChatService initializing with use_rag={use_rag}")
 
@@ -62,6 +71,55 @@ class ChatService:
             crisis_assessment = analysis.get('crisis_assessment', {})
             fusion_result = analysis.get('fusion_result', {})
 
+            # Apply bias reduction to emotion prediction
+            if self.bias_reducer:
+                try:
+                    # Prepare emotion data for bias correction
+                    raw_emotion = {
+                        'emotion': fusion_result.get('dominant_emotion', 'neutral'),
+                        'confidence': fusion_result.get('dominant_emotion_confidence', 0.5),
+                        'all_scores': {}
+                    }
+
+                    # Extract all emotion scores
+                    for emotion_item in text_emotion.get('all_emotions', []):
+                        raw_emotion['all_scores'][emotion_item.get('label')] = emotion_item.get('score')
+
+                    # Apply bias reduction algorithms
+                    corrected_emotion = self.bias_reducer.apply_bias_reduction(
+                        text=chat_request.message,
+                        raw_prediction=raw_emotion
+                    )
+
+                    # Apply contextual correction
+                    corrected_emotion = self.bias_reducer.apply_contextual_correction(
+                        text=chat_request.message,
+                        emotion=corrected_emotion['emotion'],
+                        confidence=corrected_emotion['confidence']
+                    )
+
+                    # Apply ensemble correction if audio available
+                    if speech_emotion:
+                        corrected_emotion = self.bias_reducer.ensemble_correction(
+                            text=chat_request.message,
+                            text_emotion=corrected_emotion,
+                            audio_emotion=speech_emotion.get('primary_emotion')
+                        )
+
+                    # Update fusion result with corrected emotion
+                    fusion_result['dominant_emotion'] = corrected_emotion['emotion']
+                    fusion_result['dominant_emotion_confidence'] = corrected_emotion['confidence']
+                    fusion_result['bias_corrected'] = True
+
+                    # Log corrections if any were applied
+                    if corrected_emotion.get('corrected') or corrected_emotion.get('context_adjusted'):
+                        logger.info(f"Bias correction applied: {raw_emotion['emotion']} → {corrected_emotion['emotion']}")
+                        if corrected_emotion.get('corrections_applied'):
+                            logger.info(f"Corrections: {corrected_emotion['corrections_applied']}")
+
+                except Exception as e:
+                    logger.warning(f"Bias reduction failed, using original prediction: {e}")
+
             # Retrieve relevant context using RAG if enabled
             rag_context = None
             rag_sources = []
@@ -72,8 +130,13 @@ class ChatService:
                         crisis_level=crisis_assessment.get('risk_level', 'none'),
                         emotion=fusion_result.get('dominant_emotion', 'neutral')
                     )
-                    rag_context = rag_response.get('context')
-                    rag_sources = rag_response.get('sources', [])
+                    # Only use context if it wasn't skipped and is actually present
+                    if rag_response.get('context') and not rag_response.get('skipped'):
+                        rag_context = rag_response.get('context')
+                        rag_sources = rag_response.get('sources', [])
+                    else:
+                        if rag_response.get('skipped'):
+                            logger.info(f"RAG skipped: {rag_response.get('skipped')}")
                 except Exception as e:
                     logger.warning(f"RAG retrieval failed: {e}")
 
@@ -110,6 +173,18 @@ class ChatService:
                 is_crisis=is_crisis
             )
 
+            # 🚨 AUTOMATIC CRISIS SMS ALERT
+            # Send emergency SMS to all contacts if high/critical crisis detected
+            if risk_level in ['high', 'critical']:
+                self._send_automatic_crisis_alerts(
+                    user_id=user_id,
+                    chat_id=chat.id,
+                    risk_level=risk_level,
+                    risk_score=fusion_result.get('risk_score', 0.0),
+                    detected_emotion=fusion_result.get('dominant_emotion', 'distressed'),
+                    message_preview=chat_request.message
+                )
+
             # Build response with full analysis
             return self._build_chat_response(
                 chat,
@@ -130,6 +205,83 @@ class ChatService:
                 from ..ml.shared.audio_utils import cleanup_temp_audio
                 cleanup_temp_audio(temp_audio_path)
 
+    def _is_casual_message(self, message: str) -> bool:
+        """
+        Detect if message is casual conversation that doesn't need RAG context
+
+        Args:
+            message: User message
+
+        Returns:
+            True if casual/greeting, False if needs mental health support
+        """
+        message_lower = message.lower().strip()
+
+        # Simple greetings
+        greetings = [
+            'hi', 'hello', 'hey', 'good morning', 'good afternoon',
+            'good evening', 'howdy', 'greetings', 'what\'s up', 'whats up',
+            'sup', 'yo', 'hiya'
+        ]
+
+        # Check if entire message is just a greeting
+        if message_lower in greetings:
+            return True
+
+        # Check if message is very short greeting-like
+        words = message_lower.split()
+        if len(words) <= 3 and any(greet in message_lower for greet in greetings):
+            # Exclude if it contains distress signals even in short messages
+            distress_signals = ['not', 'bad', 'sad', 'help', 'depressed', 'anxious', 'worried']
+            if not any(signal in message_lower for signal in distress_signals):
+                return True
+
+        # Casual acknowledgments
+        casual_phrases = [
+            'ok', 'okay', 'thanks', 'thank you', 'yes', 'no', 'yeah', 'nah',
+            'sure', 'alright', 'cool', 'nice', 'good', 'great'
+        ]
+
+        if len(words) <= 2 and message_lower in casual_phrases:
+            return True
+
+        return False
+
+    def _is_help_seeking_question(self, message: str) -> bool:
+        """
+        Detect if user is explicitly asking for techniques, advice, or help
+
+        Args:
+            message: User message
+
+        Returns:
+            True if user is asking for help/techniques/advice
+        """
+        message_lower = message.lower()
+
+        # Question indicators
+        help_seeking_patterns = [
+            'can you', 'could you', 'can u', 'would you',
+            'how to', 'how can', 'how do', 'what can',
+            'give me', 'share', 'tell me', 'suggest', 'recommend',
+            'any tips', 'any advice', 'any techniques', 'any ways',
+            'help me', 'show me', 'teach me', 'what should',
+        ]
+
+        # Help topics
+        help_topics = [
+            'technique', 'method', 'strategy', 'way', 'tips', 'advice',
+            'exercise', 'practice', 'cope', 'deal with', 'manage',
+            'relax', 'calm', 'feel better', 'reduce', 'handle',
+            'overcome', 'stop', 'prevent', 'avoid'
+        ]
+
+        # Check if message contains help-seeking patterns
+        has_help_pattern = any(pattern in message_lower for pattern in help_seeking_patterns)
+        has_help_topic = any(topic in message_lower for topic in help_topics)
+
+        return has_help_pattern and has_help_topic
+
     def _retrieve_context(
         self,
         message: str,
@@ -145,8 +297,18 @@ class ChatService:
             emotion: Detected emotion
 
         Returns:
-            Dict with context and sources
+            Dict with context and sources (or None if not relevant)
         """
+        # Skip RAG for casual messages
+        if self._is_casual_message(message):
+            return {
+                "context": None,
+                "sources": [],
+                "num_retrieved": 0,
+                "avg_score": 0.0,
+                "skipped": "casual_conversation"
+            }
+
         # Determine category filter based on crisis level and emotion
         metadata_filter = None
         if crisis_level in ['high', 'critical']:
@@ -165,6 +327,34 @@ class ChatService:
             use_diversity=True
         )
 
+        # Check relevance threshold
+        avg_score = rag_response.metadata["avg_score"]
+
+        # Check if this is a help-seeking question
+        is_help_seeking = self._is_help_seeking_question(message)
+
+        # Minimum relevance thresholds based on context
+        if crisis_level in ['high', 'critical']:
+            min_score = 0.3  # Lower threshold for crisis - we want to provide help
+        elif is_help_seeking:
+            min_score = 0.35  # Low threshold for explicit help requests - user wants techniques
+            logger.info(f"Help-seeking question detected - using lower RAG threshold ({min_score})")
+        elif emotion in ['sadness', 'fear', 'anger']:
+            min_score = 0.45  # Moderate threshold for negative emotions
+        else:
+            min_score = 0.6  # Higher threshold for neutral/positive - only truly relevant content
+
+        # Skip RAG if relevance too low
+        if avg_score < min_score:
+            logger.info(f"RAG skipped - low relevance score {avg_score:.3f} < {min_score}")
+            return {
+                "context": None,
+                "sources": [],
+                "num_retrieved": 0,
+                "avg_score": avg_score,
+                "skipped": "low_relevance"
+            }
+
         # Extract sources
         sources = [
             {
@@ -176,11 +366,13 @@ class ChatService:
             for doc in rag_response.retrieved_docs
         ]
 
+        logger.info(f"RAG retrieved {len(sources)} docs with avg score {avg_score:.3f}")
+
         return {
             "context": rag_response.context,
             "sources": sources,
             "num_retrieved": rag_response.metadata["num_retrieved"],
-            "avg_score": round(rag_response.metadata["avg_score"], 3)
+            "avg_score": round(avg_score, 3)
         }
 
     def _map_risk_to_crisis_level(self, risk_level: str) -> int:
@@ -193,6 +385,68 @@ class ChatService:
             'critical': 3
         }
         return risk_map.get(risk_level, 0)
+
+    def _send_automatic_crisis_alerts(
+        self,
+        user_id: int,
+        chat_id: int,
+        risk_level: str,
+        risk_score: float,
+        detected_emotion: str,
+        message_preview: str
+    ):
+        """
+        Automatically send SMS alerts to all emergency contacts when crisis detected
+
+        This runs asynchronously to not block the chat response.
+        Handles errors gracefully - chat continues even if SMS fails.
+        """
+        try:
+            from .emergency_alert_service import EmergencyAlertService
+
+            logger.info(f"🚨 Automatic crisis alert triggered - User: {user_id}, Risk: {risk_level}, Score: {risk_score:.2f}")
+
+            # Initialize alert service
+            alert_service = EmergencyAlertService(self.db)
+
+            # Get user's emergency contacts
+            contacts = alert_service.get_user_emergency_contacts(user_id)
+
+            if not contacts:
+                logger.warning(f"⚠️ No emergency contacts configured for user {user_id} - skipping automatic alert")
+                return
+
+            # Build crisis details
+            crisis_details = {
+                "risk_level": risk_level,
+                "risk_score": risk_score,
+                "detected_emotion": detected_emotion,
+                "crisis_reason": message_preview[:150]  # Truncate to 150 chars
+            }
+
+            # Send alerts to all contacts (without location for privacy)
+            result = alert_service.send_alert_to_all_contacts(
+                user_id=user_id,
+                crisis_details=crisis_details,
+                message_preview=message_preview[:100],  # Preview for SMS
+                location=None  # Don't send location automatically
+            )
+
+            # Log results
+            if result.get("success"):
+                logger.info(
+                    f"✓ Automatic crisis alerts sent - "
+                    f"Sent: {result.get('alerts_sent')}, "
+                    f"Failed: {result.get('alerts_failed')}, "
+                    f"Total: {result.get('total_contacts')}"
+                )
+            else:
+                logger.error(f"✗ Automatic crisis alert failed: {result.get('error')}")
+
+        except Exception as e:
+            # Don't let SMS failures break the chat response
+            logger.error(f"✗ Error in automatic crisis alert: {str(e)}")
+            logger.exception(e)  # Log full traceback
 
     def _analyze_session_history(self, session_id: str, limit: int = 5) -> Dict[str, Any]:
         """

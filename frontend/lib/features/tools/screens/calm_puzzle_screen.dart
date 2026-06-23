@@ -28,7 +28,6 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
 
   final GameTrackingService _gameTrackingService = GameTrackingService();
   GameSession? _currentSession;
-  DateTime? _sessionStartTime;
 
   // Calming nature images
   final List<PuzzleImage> images = const [
@@ -104,7 +103,6 @@ class _CalmPuzzleScreenState extends State<CalmPuzzleScreen>
 
   Future<void> _startGameSession() async {
     try {
-      _sessionStartTime = DateTime.now();
       final session = await _gameTrackingService.startSession(
         GameSessionStart(
           gameType: 'puzzle',

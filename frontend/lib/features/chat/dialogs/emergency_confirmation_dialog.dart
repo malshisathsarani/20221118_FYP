@@ -12,14 +12,14 @@ class EmergencyConfirmationDialog extends StatefulWidget {
   final int countdownSeconds;
 
   const EmergencyConfirmationDialog({
-    Key? key,
+    super.key,
     required this.riskScore,
     required this.crisisReason,
     required this.contacts,
     this.onConfirm,
     this.onCancel,
     this.countdownSeconds = 30,
-  }) : super(key: key);
+  });
 
   @override
   State<EmergencyConfirmationDialog> createState() =>

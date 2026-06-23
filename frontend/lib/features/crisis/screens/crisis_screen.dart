@@ -55,7 +55,10 @@ class _CrisisScreenState extends State<CrisisScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading contacts: $e')),
+          SnackBar(
+            content: Text('Error loading contacts: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -86,11 +89,13 @@ class _CrisisScreenState extends State<CrisisScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Confirm Call'),
-          content: Text('Call $name at $number?'),
+          backgroundColor: AppColors.surface,
+          title: const Text('Confirm Call', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          content: Text('Call $name at $number?', style: const TextStyle(color: AppColors.textPrimary)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
@@ -98,6 +103,11 @@ class _CrisisScreenState extends State<CrisisScreen> {
                 Navigator.pop(context);
                 _makePhoneCall(number);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
               child: const Text('Call'),
             ),
           ],
@@ -117,48 +127,90 @@ class _CrisisScreenState extends State<CrisisScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Emergency Contact'),
+          backgroundColor: AppColors.surface,
+          title: const Text('Add Emergency Contact', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nameController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Name *',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'e.g., Mom, Dr. Smith',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: phoneController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Phone Number *',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'e.g., (555) 123-4567',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: relationshipController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Relationship',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'e.g., Family, Therapist, Friend',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: emailController,
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Email (Optional)',
+                    labelStyle: TextStyle(color: AppColors.textSecondary),
                     hintText: 'contact@example.com',
+                    hintStyle: TextStyle(color: AppColors.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.divider),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 12),
                 CheckboxListTile(
-                  title: const Text('Set as Primary Contact'),
+                  title: const Text(
+                    'Set as Primary Contact',
+                    style: TextStyle(color: AppColors.textPrimary),
+                  ),
                   value: isPrimary,
+                  activeColor: AppColors.primary,
+                  checkColor: Colors.white,
                   onChanged: (value) {
                     setDialogState(() {
                       isPrimary = value ?? false;
@@ -172,6 +224,7 @@ class _CrisisScreenState extends State<CrisisScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
@@ -180,7 +233,9 @@ class _CrisisScreenState extends State<CrisisScreen> {
                     phoneController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('Name and phone are required')),
+                        content: Text('Name and phone are required'),
+                        backgroundColor: AppColors.error,
+                    ),
                   );
                   return;
                 }
@@ -198,6 +253,11 @@ class _CrisisScreenState extends State<CrisisScreen> {
                   isPrimary: isPrimary,
                 );
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
               child: const Text('Add Contact'),
             ),
           ],
@@ -227,13 +287,19 @@ class _CrisisScreenState extends State<CrisisScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contact added successfully')),
+          const SnackBar(
+            content: Text('Contact added successfully'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding contact: $e')),
+          SnackBar(
+            content: Text('Error adding contact: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -245,13 +311,19 @@ class _CrisisScreenState extends State<CrisisScreen> {
       await _loadUserContacts();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contact deleted')),
+          const SnackBar(
+            content: Text('Contact deleted'),
+            backgroundColor: AppColors.success,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting contact: $e')),
+          SnackBar(
+            content: Text('Error deleting contact: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -261,11 +333,13 @@ class _CrisisScreenState extends State<CrisisScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Contact'),
-        content: Text('Are you sure you want to delete $contactName?'),
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete Contact', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete $contactName?', style: const TextStyle(color: AppColors.textPrimary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -274,8 +348,9 @@ class _CrisisScreenState extends State<CrisisScreen> {
               _deleteContact(contactId);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
+              elevation: 0,
             ),
             child: const Text('Delete'),
           ),
@@ -287,13 +362,24 @@ class _CrisisScreenState extends State<CrisisScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: const CustomAppBar(title: 'Crisis Support'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.background,
+              AppColors.surface,
+              AppColors.surface,
+            ],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Emergency message
             Container(
               padding: const EdgeInsets.all(20),
@@ -370,14 +456,32 @@ class _CrisisScreenState extends State<CrisisScreen> {
             const SizedBox(height: 24),
 
             // Emergency contacts
-            Text(
+            const Text(
               'Emergency Resources',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                letterSpacing: 0.5,
+              ),
             ),
             const SizedBox(height: 12),
             ...emergencyContacts.map((contact) {
-              return Card(
+              return Container(
                 margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -389,14 +493,21 @@ class _CrisisScreenState extends State<CrisisScreen> {
                           children: [
                             Text(
                               contact.name,
-                              style: Theme.of(context).textTheme.bodyLarge,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               contact.isTextLine
                                   ? 'Text HOME to ${contact.number}'
                                   : contact.number,
-                              style: Theme.of(context).textTheme.bodySmall,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -406,6 +517,13 @@ class _CrisisScreenState extends State<CrisisScreen> {
                           contact.name,
                           contact.number,
                           isTextLine: contact.isTextLine,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -430,14 +548,21 @@ class _CrisisScreenState extends State<CrisisScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   'Your Contacts',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: _showAddContactDialog,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add Contact'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                  ),
                 ),
               ],
             ),
@@ -448,10 +573,23 @@ class _CrisisScreenState extends State<CrisisScreen> {
               const Center(
                   child: Padding(
                 padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(color: AppColors.primary),
               ))
             else if (_userContacts.isEmpty)
-              Card(
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -459,17 +597,24 @@ class _CrisisScreenState extends State<CrisisScreen> {
                       Icon(
                         Icons.contacts_outlined,
                         size: 48,
-                        color: Colors.grey[400],
+                        color: AppColors.textSecondary.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 12),
-                      Text(
+                      const Text(
                         'No contacts yet',
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      const Text(
                         'Add trusted contacts for quick access during a crisis',
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -477,6 +622,14 @@ class _CrisisScreenState extends State<CrisisScreen> {
                         onPressed: _showAddContactDialog,
                         icon: const Icon(Icons.add),
                         label: const Text('Add Your First Contact'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -484,8 +637,21 @@ class _CrisisScreenState extends State<CrisisScreen> {
               )
             else
               ..._userContacts.map((contact) {
-                return Card(
+                return Container(
                   margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.divider, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
@@ -494,52 +660,62 @@ class _CrisisScreenState extends State<CrisisScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      contact.name,
-                                      style:
-                                          Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                  ),
-                                  if (contact.isPrimary) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'PRIMARY',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                              Text(
+                                contact.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               if (contact.relationshipType != null)
                                 Text(
                                   contact.relationshipType!,
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
                               Text(
                                 contact.phone,
-                                style: Theme.of(context).textTheme.bodySmall,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
                         ),
+                        if (contact.isPrimary)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'PRIMARY',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
                         OutlinedButton(
                           onPressed: () =>
                               _handleCallClick(contact.name, contact.phone),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                           child: const Row(
                             children: [
                               Icon(Icons.phone, size: 16),
@@ -551,7 +727,7 @@ class _CrisisScreenState extends State<CrisisScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.delete_outline,
-                              color: Colors.red),
+                              color: AppColors.error),
                           onPressed: () => _showDeleteConfirmation(
                               contact.id!, contact.name),
                         ),
@@ -560,7 +736,8 @@ class _CrisisScreenState extends State<CrisisScreen> {
                   ),
                 );
               }),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const BottomNavBar(currentIndex: 1),

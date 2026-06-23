@@ -187,7 +187,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
 
           // Send button
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),

@@ -43,7 +43,13 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str
     CLOUDINARY_UPLOAD_PRESET: str = "ml_unsigned"
 
-    # Twilio (Emergency Alerts)
+    # WhatsApp Business API (Emergency Alerts)
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
+    WHATSAPP_ACCESS_TOKEN: str = ""
+    WHATSAPP_API_VERSION: str = "v25.0"
+
+    # Twilio (Deprecated)
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_PHONE_NUMBER: str = ""

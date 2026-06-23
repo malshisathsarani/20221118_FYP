@@ -3,14 +3,15 @@ import '../../../shared/presentation/widgets/custom_app_bar.dart';
 import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/emergency_alert_service.dart';
-import '../../../core/services/location_service.dart';
+import '../../../core/services/feedback_service.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/models/emergency_contact.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
-import '../dialogs/emergency_confirmation_dialog.dart';
+import '../widgets/message_feedback_widget.dart';
+import '../dialogs/modern_crisis_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -23,12 +24,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatService _chatService = ChatService();
+  final FeedbackService _feedbackService = FeedbackService();
 
   final List<Map<String, dynamic>> _messages = [];
   String? _sessionId;
   bool _isTyping = false;
   bool _showCrisisWarning = false;
-  String? _pendingAudioPath; // Store audio path for sending with message
 
   // Animation controllers
   AnimationController? _floatingController;
@@ -39,21 +40,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final List<ChatTheme> _themes = [
     ChatTheme(
       name: 'Soft Blue',
-      gradient: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
-      userBubble: Color(0xFF42A5F5),
-      botBubble: Color(0xFFF1F8FF),
+      gradient: const [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
+      userBubble: const Color(0xFF42A5F5),
+      botBubble: const Color(0xFFF1F8FF),
     ),
     ChatTheme(
       name: 'Gentle Green',
-      gradient: [Color(0xFFC8E6C9), Color(0xFFE8F5E9)],
-      userBubble: Color(0xFF66BB6A),
-      botBubble: Color(0xFFF1F8F4),
+      gradient: const [Color(0xFFC8E6C9), Color(0xFFE8F5E9)],
+      userBubble: const Color(0xFF66BB6A),
+      botBubble: const Color(0xFFF1F8F4),
     ),
     ChatTheme(
       name: 'Soft Purple',
-      gradient: [Color(0xFFE1BEE7), Color(0xFFF3E5F5)],
-      userBubble: Color(0xFFAB47BC),
-      botBubble: Color(0xFFFAF4FB),
+      gradient: const [Color(0xFFE1BEE7), Color(0xFFF3E5F5)],
+      userBubble: const Color(0xFFAB47BC),
+      botBubble: const Color(0xFFFAF4FB),
     ),
   ];
 
@@ -117,8 +118,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             );
           }
         } catch (e) {
-          print('Failed to load chat history: $e');
           // If loading history fails, just show welcome message
+          // Error: $e
           _addMessage(
             text: 'Welcome back! How are you feeling?',
             isUser: false,
@@ -152,6 +153,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     EmotionAnalysis? emotion,
     CrisisDetection? crisis,
     String? audioUrl,
+    int? messageId,
     bool skipScroll = false,
   }) {
     setState(() {
@@ -161,6 +163,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'emotion': emotion,
         'crisis': crisis,
         'audioUrl': audioUrl,
+        'messageId': messageId,
         'timestamp': DateTime.now(),
       });
     });
@@ -179,6 +182,29 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
     });
+  }
+
+  Future<void> _handleFeedback(int messageId, bool helpful, String? comment) async {
+    try {
+      // Convert helpful boolean to rating (5 for helpful, 2 for not helpful)
+      final rating = helpful ? 5 : 2;
+
+      await _feedbackService.submitFeedback(
+        chatId: messageId,
+        rating: rating,
+        feedbackType: 'response_quality',
+        comment: comment,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _startNewChat() async {
@@ -245,7 +271,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       setState(() {
         _isTyping = false;
         _showCrisisWarning = chatMessage.crisisDetection?.isCrisis ?? false;
-        _pendingAudioPath = null; // Clear pending audio
       });
 
       _addMessage(
@@ -254,6 +279,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         emotion: chatMessage.emotionAnalysis,
         crisis: chatMessage.crisisDetection,
         audioUrl: chatMessage.audioUrl,
+        messageId: chatMessage.id,
       );
 
       // Show emergency dialog for high/critical risk
@@ -298,6 +324,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           emotion: chatMessage.emotionAnalysis,
           crisis: chatMessage.crisisDetection,
           audioUrl: chatMessage.audioUrl,
+          messageId: chatMessage.id,
         );
 
         // Show emergency dialog for high/critical risk
@@ -324,17 +351,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       if (!mounted) return;
 
-      // Get user location
-      final locationService = LocationService();
-      final location = await locationService.getCurrentLocationWithTimeout();
+      // Location disabled for privacy - emergency contacts will be notified without GPS coordinates
+      // final locationService = LocationService();
+      // final location = await locationService.getCurrentLocationWithTimeout();
 
       if (!mounted) return;
 
-      // Show emergency dialog
+      // Show modern emergency dialog with glassmorphism
       final dialogResult = await showDialog<Map<String, dynamic>>(
         context: context,
         barrierDismissible: false, // Cannot dismiss by tapping outside
-        builder: (context) => EmergencyConfirmationDialog(
+        barrierColor: Colors.black.withValues(alpha: 0.7), // Darker backdrop for modern look
+        builder: (context) => ModernCrisisDialog(
           riskScore: crisis.crisisScore,
           crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
           contacts: contacts,
@@ -348,25 +376,30 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 riskScore: crisis.crisisScore,
                 detectedEmotion: emotionAnalysis?.emotion ?? 'distressed',
                 crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
-                latitude: location?['latitude'],
-                longitude: location?['longitude'],
+                latitude: null, // Location disabled for privacy
+                longitude: null, // Location disabled for privacy
                 sendSms: true,
                 makeCall: crisis.crisisScore >= 0.85, // Call for critical only
               );
 
               // Return result to be shown after dialog is closed
-              Navigator.of(context).pop({
-                'success': result['success'],
-                'error': result['error'],
-                'contactName': contact.name,
-              });
+              // Use a safer approach by checking if context is still mounted
+              if (context.mounted) {
+                Navigator.of(context).pop({
+                  'success': result['success'],
+                  'error': result['error'],
+                  'contactName': contact.name,
+                });
+              }
             } catch (e) {
               // Return error to be shown after dialog is closed
-              Navigator.of(context).pop({
-                'success': false,
-                'error': e.toString(),
-                'contactName': contact.name,
-              });
+              if (context.mounted) {
+                Navigator.of(context).pop({
+                  'success': false,
+                  'error': e.toString(),
+                  'contactName': contact.name,
+                });
+              }
             }
           },
           onCancel: () {
@@ -404,12 +437,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
     } catch (e) {
-      print('Error showing emergency dialog: $e');
+      // Error showing emergency dialog: $e
       // Optionally show a fallback message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Unable to load emergency contacts. Please add contacts in settings.'),
+            content: const Text('Unable to load emergency contacts. Please add contacts in settings.'),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
@@ -647,6 +680,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final emotion = message['emotion'] as EmotionAnalysis?;
     final crisis = message['crisis'] as CrisisDetection?;
     final audioUrl = message['audioUrl'] as String?;
+    final messageId = message['messageId'] as int?;
     final currentTheme = _themes[_currentThemeIndex];
 
     return TweenAnimationBuilder<double>(
@@ -747,6 +781,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
               ),
             ],
+            // Feedback widget for bot messages
+            if (!isUser && messageId != null) ...[
+              const SizedBox(height: 12),
+              MessageFeedbackWidget(
+                messageId: messageId,
+                onFeedback: (helpful, comment) => _handleFeedback(
+                  messageId,
+                  helpful,
+                  comment,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -791,7 +837,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: 8,
                       height: 8,
-                      transform: Matrix4.identity()..scale(scale),
+                      transform: Matrix4.diagonal3Values(scale, scale, 1.0),
                       decoration: BoxDecoration(
                         color: currentTheme.userBubble.withValues(alpha: 0.6),
                         shape: BoxShape.circle,

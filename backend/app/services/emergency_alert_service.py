@@ -1,39 +1,34 @@
 """
 Emergency Alert Service
-Handles SMS and phone call alerts to emergency contacts via Twilio
+Handles WhatsApp alerts to emergency contacts via Meta WhatsApp Business API
 """
-from twilio.rest import Client
-from twilio.base.exceptions import TwilioRestException
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, List
 import logging
 from datetime import datetime
 from ..core.config import settings
 from ..repositories.emergency_contact_repo import EmergencyContactRepository
+from .whatsapp_service import WhatsAppService
 
 logger = logging.getLogger(__name__)
 
 
 class EmergencyAlertService:
-    """Service for sending emergency alerts via SMS and phone calls"""
+    """Service for sending emergency alerts via WhatsApp"""
 
     def __init__(self, db: Session):
         self.db = db
         self.contact_repo = EmergencyContactRepository(db)
 
-        # Initialize Twilio client
+        # Initialize WhatsApp service
         try:
-            self.twilio_client = Client(
-                settings.TWILIO_ACCOUNT_SID,
-                settings.TWILIO_AUTH_TOKEN
-            )
-            self.from_number = settings.TWILIO_PHONE_NUMBER
-            logger.info("✓ Twilio client initialized successfully")
+            self.whatsapp_service = WhatsAppService()
+            logger.info("✓ WhatsApp service initialized successfully")
         except Exception as e:
-            logger.error(f"✗ Failed to initialize Twilio client: {e}")
-            self.twilio_client = None
+            logger.error(f"✗ Failed to initialize WhatsApp service: {e}")
+            self.whatsapp_service = None
 
-    def send_sms_alert(
+    def send_whatsapp_alert(
         self,
         contact_phone: str,
         user_name: str,
@@ -41,60 +36,48 @@ class EmergencyAlertService:
         location: Optional[Dict] = None
     ) -> Dict:
         """
-        Send SMS alert to emergency contact
+        Send WhatsApp alert to emergency contact
 
         Args:
-            contact_phone: Emergency contact's phone number
+            contact_phone: Emergency contact's WhatsApp number
             user_name: Name of the user in crisis
-            crisis_details: Dict with risk_level, risk_score, detected_emotion
+            crisis_details: Dict with risk_level, risk_score, detected_emotion, crisis_reason
             location: Optional dict with latitude, longitude
 
         Returns:
-            Dict with success status and message_sid or error
+            Dict with success status and message_id or error
         """
-        if not self.twilio_client:
+        if not self.whatsapp_service:
             return {
                 "success": False,
-                "error": "Twilio client not initialized. Check credentials."
+                "error": "WhatsApp service not initialized. Check credentials."
             }
 
         try:
-            # Build alert message
-            message_body = self._build_sms_message(
-                user_name, crisis_details, location
+            # Send WhatsApp alert
+            result = self.whatsapp_service.send_crisis_alert(
+                to_number=contact_phone,
+                user_name=user_name,
+                crisis_level=crisis_details.get("risk_level", "high"),
+                risk_score=crisis_details.get("risk_score", 0.0),
+                detected_emotion=crisis_details.get("detected_emotion", "distressed"),
+                crisis_reason=crisis_details.get("crisis_reason", "Crisis indicators detected"),
+                location=location
             )
 
-            # Send SMS
-            message = self.twilio_client.messages.create(
-                body=message_body,
-                from_=self.from_number,
-                to=contact_phone
-            )
+            return result
 
-            logger.info(f"✓ SMS alert sent to {contact_phone}. SID: {message.sid}")
-
-            return {
-                "success": True,
-                "message_sid": message.sid,
-                "status": message.status,
-                "sent_at": datetime.utcnow().isoformat()
-            }
-
-        except TwilioRestException as e:
-            error_msg = f"Twilio error: {e.msg} (Code: {e.code})"
-            logger.error(f"✗ {error_msg}")
-            logger.error(f"✗ Contact phone: {contact_phone}, From: {self.from_number}")
-            return {
-                "success": False,
-                "error": error_msg,
-                "error_code": e.code
-            }
         except Exception as e:
-            logger.error(f"✗ Error sending SMS alert: {e}")
+            logger.error(f"✗ Error sending WhatsApp alert: {e}")
             return {
                 "success": False,
                 "error": str(e)
             }
+
+    # Alias for backward compatibility
+    def send_sms_alert(self, *args, **kwargs) -> Dict:
+        """Alias for send_whatsapp_alert (backward compatibility)"""
+        return self.send_whatsapp_alert(*args, **kwargs)
 
     def make_voice_call(
         self,
@@ -103,67 +86,32 @@ class EmergencyAlertService:
         crisis_level: str
     ) -> Dict:
         """
-        Make automated voice call to emergency contact
+        Voice call feature deprecated (WhatsApp replaced Twilio)
+        Now sends a high-priority WhatsApp message instead
 
         Args:
-            contact_phone: Emergency contact's phone number
+            contact_phone: Emergency contact's WhatsApp number
             user_name: Name of the user in crisis
             crisis_level: Crisis severity (critical, high, moderate)
 
         Returns:
-            Dict with success status and call_sid or error
+            Dict with success status indicating WhatsApp sent
         """
-        if not self.twilio_client:
-            return {
-                "success": False,
-                "error": "Twilio client not initialized"
-            }
+        logger.info("ℹ️ Voice call deprecated - sending high-priority WhatsApp instead")
 
-        try:
-            # TwiML URL for voice message (you'll need to host this or use Twilio's TwiML Bins)
-            twiml_url = f"{settings.API_URL}/api/emergency/voice-message?user={user_name}&level={crisis_level}"
+        # Send high-priority WhatsApp message instead
+        crisis_details = {
+            "risk_level": crisis_level,
+            "risk_score": 0.9 if crisis_level == "critical" else 0.75,
+            "detected_emotion": "severe distress",
+            "crisis_reason": "URGENT: Immediate attention required"
+        }
 
-            # Alternatively, use inline TwiML
-            twiml = f"""
-            <Response>
-                <Say voice="alice">
-                    This is an emergency alert from the Mental Health Chatbot.
-                    {user_name} has been detected in a {crisis_level} risk crisis situation.
-                    Please contact them immediately or call emergency services.
-                    This is an automated message. Thank you.
-                </Say>
-            </Response>
-            """
-
-            # Make call
-            call = self.twilio_client.calls.create(
-                twiml=twiml,
-                from_=self.from_number,
-                to=contact_phone
-            )
-
-            logger.info(f"✓ Voice call initiated to {contact_phone}. SID: {call.sid}")
-
-            return {
-                "success": True,
-                "call_sid": call.sid,
-                "status": call.status,
-                "initiated_at": datetime.utcnow().isoformat()
-            }
-
-        except TwilioRestException as e:
-            logger.error(f"✗ Twilio error making call: {e}")
-            return {
-                "success": False,
-                "error": f"Twilio error: {e.msg}",
-                "error_code": e.code
-            }
-        except Exception as e:
-            logger.error(f"✗ Error making voice call: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+        return self.send_whatsapp_alert(
+            contact_phone=contact_phone,
+            user_name=user_name,
+            crisis_details=crisis_details
+        )
 
     def send_comprehensive_alert(
         self,
@@ -175,18 +123,18 @@ class EmergencyAlertService:
         make_call: bool = False
     ) -> Dict:
         """
-        Send comprehensive alert (SMS + optional voice call)
+        Send comprehensive alert via WhatsApp
 
         Args:
             user_id: ID of user in crisis
             contact_id: ID of emergency contact to alert
             crisis_details: Crisis information
             location: Optional GPS coordinates
-            send_sms: Whether to send SMS (default True)
-            make_call: Whether to make voice call (default False, only for critical)
+            send_sms: Whether to send WhatsApp (default True)
+            make_call: Deprecated (sends high-priority WhatsApp instead)
 
         Returns:
-            Dict with results of SMS and/or call
+            Dict with results of WhatsApp message
         """
         try:
             # Get user and contact information
@@ -203,30 +151,36 @@ class EmergencyAlertService:
                 return {"success": False, "error": "Emergency contact not found"}
 
             results = {
+                "success": True,
                 "user_id": user_id,
                 "contact_id": contact_id,
                 "contact_name": contact.name,
                 "timestamp": datetime.utcnow().isoformat()
             }
 
-            # Send SMS alert
+            # Send WhatsApp alert (replaces SMS)
             if send_sms:
-                sms_result = self.send_sms_alert(
+                whatsapp_result = self.send_whatsapp_alert(
                     contact_phone=contact.phone,
                     user_name=user.username or user.email,
                     crisis_details=crisis_details,
                     location=location
                 )
-                results["sms"] = sms_result
+                results["whatsapp"] = whatsapp_result
+                results["sms"] = whatsapp_result  # For backward compatibility
 
-            # Make voice call for critical situations
+                # If WhatsApp was requested but failed, mark the whole operation as failed
+                if not whatsapp_result.get("success"):
+                    results["success"] = False
+                    results["error"] = whatsapp_result.get("error", "WhatsApp failed")
+
+            # For critical situations, log that voice call is deprecated
             if make_call or crisis_details.get("risk_level") == "critical":
-                call_result = self.make_voice_call(
-                    contact_phone=contact.phone,
-                    user_name=user.username or user.email,
-                    crisis_level=crisis_details.get("risk_level", "high")
-                )
-                results["call"] = call_result
+                logger.info("ℹ️ Voice call requested but deprecated - WhatsApp already sent")
+                results["call"] = {
+                    "success": True,
+                    "note": "Voice call deprecated - WhatsApp sent instead"
+                }
 
             # Log the alert
             self._log_alert(user_id, contact_id, crisis_details, results)
@@ -246,28 +200,9 @@ class EmergencyAlertService:
         crisis_details: Dict,
         location: Optional[Dict] = None
     ) -> str:
-        """Build SMS message text"""
-        risk_level = crisis_details.get("risk_level", "unknown").upper()
-        risk_score = crisis_details.get("risk_score", 0) * 100
-        emotion = crisis_details.get("detected_emotion", "distressed")
-
-        message = f"🚨 MENTAL HEALTH CRISIS ALERT\n\n"
-        message += f"User: {user_name}\n"
-        message += f"Risk Level: {risk_level}\n"
-        message += f"Risk Score: {risk_score:.1f}%\n"
-        message += f"Emotional State: {emotion}\n"
-
-        if location:
-            lat = location.get("latitude")
-            lon = location.get("longitude")
-            if lat and lon:
-                message += f"\n📍 Location: {lat:.6f}, {lon:.6f}\n"
-                message += f"Map: https://maps.google.com/?q={lat},{lon}\n"
-
-        message += f"\n⚠️ Please contact {user_name} immediately or call emergency services.\n"
-        message += f"\nSent by Mental Health Chatbot at {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
-
-        return message
+        """Deprecated: WhatsApp service builds messages now"""
+        logger.warning("⚠️ _build_sms_message is deprecated - use WhatsApp service")
+        return f"Crisis alert for {user_name}"
 
     def _log_alert(
         self,
@@ -278,12 +213,11 @@ class EmergencyAlertService:
     ):
         """Log alert to database for tracking"""
         try:
-            # You can create an AlertLog model to track all alerts sent
+            # Log WhatsApp alert result
             logger.info(
-                f"Alert sent - User: {user_id}, Contact: {contact_id}, "
+                f"📱 Alert sent - User: {user_id}, Contact: {contact_id}, "
                 f"Risk: {crisis_details.get('risk_level')}, "
-                f"SMS: {results.get('sms', {}).get('success')}, "
-                f"Call: {results.get('call', {}).get('success')}"
+                f"WhatsApp: {results.get('whatsapp', {}).get('success')}"
             )
         except Exception as e:
             logger.error(f"Failed to log alert: {e}")
@@ -292,27 +226,107 @@ class EmergencyAlertService:
         """Get all emergency contacts for a user"""
         return self.contact_repo.get_user_contacts(user_id)
 
-    def test_twilio_connection(self) -> Dict:
-        """Test Twilio connection and credentials"""
-        if not self.twilio_client:
-            return {
-                "success": False,
-                "error": "Twilio client not initialized"
-            }
+    def send_alert_to_all_contacts(
+        self,
+        user_id: int,
+        crisis_details: Dict,
+        message_preview: str,
+        location: Optional[Dict] = None
+    ) -> Dict:
+        """
+        Send WhatsApp alerts to all emergency contacts for a user
 
+        Args:
+            user_id: ID of user in crisis
+            crisis_details: Dict with risk_level, risk_score, detected_emotion, crisis_reason
+            message_preview: Preview of the crisis message
+            location: Optional GPS coordinates
+
+        Returns:
+            Dict with results including success status, alerts sent/failed counts
+        """
         try:
-            # Fetch account info to verify credentials
-            account = self.twilio_client.api.accounts(settings.TWILIO_ACCOUNT_SID).fetch()
+            # Get all emergency contacts for this user
+            contacts = self.get_user_emergency_contacts(user_id)
+
+            if not contacts:
+                logger.warning(f"⚠️ No emergency contacts found for user {user_id}")
+                return {
+                    "success": False,
+                    "error": "No emergency contacts configured",
+                    "total_contacts": 0,
+                    "alerts_sent": 0,
+                    "alerts_failed": 0
+                }
+
+            # Get user info
+            from ..repositories.user_repo import UserRepository
+            user_repo = UserRepository(self.db)
+            user = user_repo.get_by_id(user_id)
+            user_name = user.username if user else f"User {user_id}"
+
+            # Send alert to each contact
+            results = []
+            alerts_sent = 0
+            alerts_failed = 0
+
+            for contact in contacts:
+                logger.info(f"📤 Sending alert to {contact.name} ({contact.phone})")
+
+                result = self.send_whatsapp_alert(
+                    contact_phone=contact.phone,
+                    user_name=user_name,
+                    crisis_details=crisis_details,
+                    location=location
+                )
+
+                results.append({
+                    "contact_id": contact.id,
+                    "contact_name": contact.name,
+                    "contact_phone": contact.phone,
+                    "success": result.get("success"),
+                    "message_id": result.get("message_id"),
+                    "error": result.get("error")
+                })
+
+                if result.get("success"):
+                    alerts_sent += 1
+                    logger.info(f"✓ Alert sent to {contact.name}")
+                else:
+                    alerts_failed += 1
+                    logger.error(f"✗ Alert failed for {contact.name}: {result.get('error')}")
 
             return {
-                "success": True,
-                "account_sid": account.sid,
-                "account_status": account.status,
-                "from_number": self.from_number
+                "success": alerts_sent > 0,  # Success if at least one alert sent
+                "total_contacts": len(contacts),
+                "alerts_sent": alerts_sent,
+                "alerts_failed": alerts_failed,
+                "results": results,
+                "timestamp": datetime.utcnow().isoformat()
             }
-        except TwilioRestException as e:
+
+        except Exception as e:
+            logger.error(f"✗ Error in send_alert_to_all_contacts: {e}")
             return {
                 "success": False,
-                "error": f"Twilio authentication failed: {e.msg}",
-                "error_code": e.code
+                "error": str(e),
+                "total_contacts": 0,
+                "alerts_sent": 0,
+                "alerts_failed": 0
             }
+
+    def test_whatsapp_connection(self) -> Dict:
+        """Test WhatsApp API connection and credentials"""
+        if not self.whatsapp_service:
+            return {
+                "success": False,
+                "error": "WhatsApp service not initialized"
+            }
+
+        return self.whatsapp_service.test_connection()
+
+    # Deprecated - for backward compatibility
+    def test_twilio_connection(self) -> Dict:
+        """Deprecated: Use test_whatsapp_connection instead"""
+        logger.warning("⚠️ test_twilio_connection is deprecated - use test_whatsapp_connection")
+        return self.test_whatsapp_connection()

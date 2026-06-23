@@ -86,17 +86,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           // Floating circles (optional - can be removed if too busy)
-          Container(
-            child: Stack(
-              children: [
-                _buildFloatingCircle(0, top: 50, left: 30, size: 80),
-                _buildFloatingCircle(1, top: 150, right: 40, size: 60),
-                _buildFloatingCircle(2, bottom: 200, left: 50, size: 100),
-                _buildFloatingCircle(3, top: 300, right: 60, size: 70),
-                _buildFloatingCircle(4, bottom: 100, right: 80, size: 90),
-                _buildFloatingCircle(5, top: 450, left: 20, size: 50),
-              ],
-            ),
+          Stack(
+            children: [
+              _buildFloatingCircle(0, top: 50, left: 30, size: 80),
+              _buildFloatingCircle(1, top: 150, right: 40, size: 60),
+              _buildFloatingCircle(2, bottom: 200, left: 50, size: 100),
+              _buildFloatingCircle(3, top: 300, right: 60, size: 70),
+              _buildFloatingCircle(4, bottom: 100, right: 80, size: 90),
+              _buildFloatingCircle(5, top: 450, left: 20, size: 50),
+            ],
           ),
           // Content
           SafeArea(
@@ -586,39 +584,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatItem(IconData icon, String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildWeeklyChart(WeeklyActivity weekly) {
     final days = [
