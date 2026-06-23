@@ -11,6 +11,7 @@ import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
 import '../dialogs/emergency_confirmation_dialog.dart';
+import '../dialogs/modern_crisis_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -324,17 +325,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       if (!mounted) return;
 
-      // Get user location
-      final locationService = LocationService();
-      final location = await locationService.getCurrentLocationWithTimeout();
+      // Location disabled for privacy - emergency contacts will be notified without GPS coordinates
+      // final locationService = LocationService();
+      // final location = await locationService.getCurrentLocationWithTimeout();
 
       if (!mounted) return;
 
-      // Show emergency dialog
+      // Show modern emergency dialog with glassmorphism
       final dialogResult = await showDialog<Map<String, dynamic>>(
         context: context,
         barrierDismissible: false, // Cannot dismiss by tapping outside
-        builder: (context) => EmergencyConfirmationDialog(
+        barrierColor: Colors.black.withOpacity(0.7), // Darker backdrop for modern look
+        builder: (context) => ModernCrisisDialog(
           riskScore: crisis.crisisScore,
           crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
           contacts: contacts,
@@ -348,25 +350,30 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 riskScore: crisis.crisisScore,
                 detectedEmotion: emotionAnalysis?.emotion ?? 'distressed',
                 crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
-                latitude: location?['latitude'],
-                longitude: location?['longitude'],
+                latitude: null, // Location disabled for privacy
+                longitude: null, // Location disabled for privacy
                 sendSms: true,
                 makeCall: crisis.crisisScore >= 0.85, // Call for critical only
               );
 
               // Return result to be shown after dialog is closed
-              Navigator.of(context).pop({
-                'success': result['success'],
-                'error': result['error'],
-                'contactName': contact.name,
-              });
+              // Use a safer approach by checking if context is still mounted
+              if (context.mounted) {
+                Navigator.of(context).pop({
+                  'success': result['success'],
+                  'error': result['error'],
+                  'contactName': contact.name,
+                });
+              }
             } catch (e) {
               // Return error to be shown after dialog is closed
-              Navigator.of(context).pop({
-                'success': false,
-                'error': e.toString(),
-                'contactName': contact.name,
-              });
+              if (context.mounted) {
+                Navigator.of(context).pop({
+                  'success': false,
+                  'error': e.toString(),
+                  'contactName': contact.name,
+                });
+              }
             }
           },
           onCancel: () {

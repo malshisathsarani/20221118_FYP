@@ -169,30 +169,30 @@ def get_emergency_contacts(
         )
 
 
-@router.get("/test-twilio")
-def test_twilio_connection(
+@router.get("/test-whatsapp")
+def test_whatsapp_connection(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """
-    Test Twilio connection and credentials
+    Test WhatsApp Business API connection and credentials
 
-    Endpoint: GET /api/emergency-alert/test-twilio
+    Endpoint: GET /api/emergency-alert/test-whatsapp
 
     Headers:
     - Authorization: Bearer <access_token>
 
     Returns:
-    - Twilio connection status
+    - WhatsApp connection status
     """
     try:
         service = EmergencyAlertService(db)
-        result = service.test_twilio_connection()
+        result = service.test_whatsapp_connection()
 
         if not result.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=result.get("error", "Twilio connection failed")
+                detail=result.get("error", "WhatsApp connection failed")
             )
 
         return result
@@ -202,5 +202,16 @@ def test_twilio_connection(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to test Twilio connection: {str(e)}"
+            detail=f"Failed to test WhatsApp connection: {str(e)}"
         )
+
+
+@router.get("/test-twilio")
+def test_twilio_connection(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Deprecated: Use /test-whatsapp instead
+    """
+    return test_whatsapp_connection(user_id, db)

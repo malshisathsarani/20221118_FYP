@@ -110,6 +110,18 @@ class ChatService:
                 is_crisis=is_crisis
             )
 
+            # 🚨 AUTOMATIC CRISIS SMS ALERT
+            # Send emergency SMS to all contacts if high/critical crisis detected
+            if risk_level in ['high', 'critical']:
+                self._send_automatic_crisis_alerts(
+                    user_id=user_id,
+                    chat_id=chat.id,
+                    risk_level=risk_level,
+                    risk_score=fusion_result.get('risk_score', 0.0),
+                    detected_emotion=fusion_result.get('dominant_emotion', 'distressed'),
+                    message_preview=chat_request.message
+                )
+
             # Build response with full analysis
             return self._build_chat_response(
                 chat,
@@ -193,6 +205,68 @@ class ChatService:
             'critical': 3
         }
         return risk_map.get(risk_level, 0)
+
+    def _send_automatic_crisis_alerts(
+        self,
+        user_id: int,
+        chat_id: int,
+        risk_level: str,
+        risk_score: float,
+        detected_emotion: str,
+        message_preview: str
+    ):
+        """
+        Automatically send SMS alerts to all emergency contacts when crisis detected
+
+        This runs asynchronously to not block the chat response.
+        Handles errors gracefully - chat continues even if SMS fails.
+        """
+        try:
+            from .emergency_alert_service import EmergencyAlertService
+
+            logger.info(f"🚨 Automatic crisis alert triggered - User: {user_id}, Risk: {risk_level}, Score: {risk_score:.2f}")
+
+            # Initialize alert service
+            alert_service = EmergencyAlertService(self.db)
+
+            # Get user's emergency contacts
+            contacts = alert_service.get_user_emergency_contacts(user_id)
+
+            if not contacts:
+                logger.warning(f"⚠️ No emergency contacts configured for user {user_id} - skipping automatic alert")
+                return
+
+            # Build crisis details
+            crisis_details = {
+                "risk_level": risk_level,
+                "risk_score": risk_score,
+                "detected_emotion": detected_emotion,
+                "crisis_reason": message_preview[:150]  # Truncate to 150 chars
+            }
+
+            # Send alerts to all contacts (without location for privacy)
+            result = alert_service.send_alert_to_all_contacts(
+                user_id=user_id,
+                crisis_details=crisis_details,
+                message_preview=message_preview[:100],  # Preview for SMS
+                location=None  # Don't send location automatically
+            )
+
+            # Log results
+            if result.get("success"):
+                logger.info(
+                    f"✓ Automatic crisis alerts sent - "
+                    f"Sent: {result.get('alerts_sent')}, "
+                    f"Failed: {result.get('alerts_failed')}, "
+                    f"Total: {result.get('total_contacts')}"
+                )
+            else:
+                logger.error(f"✗ Automatic crisis alert failed: {result.get('error')}")
+
+        except Exception as e:
+            # Don't let SMS failures break the chat response
+            logger.error(f"✗ Error in automatic crisis alert: {str(e)}")
+            logger.exception(e)  # Log full traceback
 
     def _analyze_session_history(self, session_id: str, limit: int = 5) -> Dict[str, Any]:
         """
