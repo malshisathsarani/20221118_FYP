@@ -3,12 +3,14 @@ import '../../../shared/presentation/widgets/custom_app_bar.dart';
 import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/emergency_alert_service.dart';
+import '../../../core/services/feedback_service.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/models/emergency_contact.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
+import '../widgets/message_feedback_widget.dart';
 import '../dialogs/modern_crisis_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatService _chatService = ChatService();
+  final FeedbackService _feedbackService = FeedbackService();
 
   final List<Map<String, dynamic>> _messages = [];
   String? _sessionId;
@@ -150,6 +153,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     EmotionAnalysis? emotion,
     CrisisDetection? crisis,
     String? audioUrl,
+    int? messageId,
     bool skipScroll = false,
   }) {
     setState(() {
@@ -159,6 +163,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         'emotion': emotion,
         'crisis': crisis,
         'audioUrl': audioUrl,
+        'messageId': messageId,
         'timestamp': DateTime.now(),
       });
     });
@@ -177,6 +182,29 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
     });
+  }
+
+  Future<void> _handleFeedback(int messageId, bool helpful, String? comment) async {
+    try {
+      // Convert helpful boolean to rating (5 for helpful, 2 for not helpful)
+      final rating = helpful ? 5 : 2;
+
+      await _feedbackService.submitFeedback(
+        chatId: messageId,
+        rating: rating,
+        feedbackType: 'response_quality',
+        comment: comment,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _startNewChat() async {
@@ -251,6 +279,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         emotion: chatMessage.emotionAnalysis,
         crisis: chatMessage.crisisDetection,
         audioUrl: chatMessage.audioUrl,
+        messageId: chatMessage.id,
       );
 
       // Show emergency dialog for high/critical risk
@@ -295,6 +324,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           emotion: chatMessage.emotionAnalysis,
           crisis: chatMessage.crisisDetection,
           audioUrl: chatMessage.audioUrl,
+          messageId: chatMessage.id,
         );
 
         // Show emergency dialog for high/critical risk
@@ -650,6 +680,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final emotion = message['emotion'] as EmotionAnalysis?;
     final crisis = message['crisis'] as CrisisDetection?;
     final audioUrl = message['audioUrl'] as String?;
+    final messageId = message['messageId'] as int?;
     final currentTheme = _themes[_currentThemeIndex];
 
     return TweenAnimationBuilder<double>(
@@ -747,6 +778,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+            // Feedback widget for bot messages
+            if (!isUser && messageId != null) ...[
+              const SizedBox(height: 12),
+              MessageFeedbackWidget(
+                messageId: messageId,
+                onFeedback: (helpful, comment) => _handleFeedback(
+                  messageId,
+                  helpful,
+                  comment,
                 ),
               ),
             ],

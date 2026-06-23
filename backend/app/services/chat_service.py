@@ -3,6 +3,7 @@ from typing import Optional, Dict, List, Any
 from ..repositories.chat_repo import ChatRepository
 from ..ml.unified_pipeline import get_unified_pipeline
 from ..ml.rag import get_rag_pipeline
+from ..ml.bias_reduction.bias_correction_algorithm import BiasReductionAlgorithm
 from ..schemas.chat import ChatRequest, ChatResponse, EmotionAnalysis, CrisisDetection
 from fastapi import HTTPException, status
 import logging
@@ -18,6 +19,14 @@ class ChatService:
         self.chat_repo = ChatRepository(db)
         self.ml_pipeline = get_unified_pipeline()
         self.use_rag = use_rag
+
+        # Initialize bias reduction algorithm
+        try:
+            self.bias_reducer = BiasReductionAlgorithm(db)
+            logger.info("✓ Bias reduction algorithm initialized")
+        except Exception as e:
+            logger.warning(f"Bias reduction initialization failed: {e}")
+            self.bias_reducer = None
 
         logger.info(f"ChatService initializing with use_rag={use_rag}")
 
@@ -61,6 +70,55 @@ class ChatService:
             speech_emotion = analysis.get('speech_emotion')
             crisis_assessment = analysis.get('crisis_assessment', {})
             fusion_result = analysis.get('fusion_result', {})
+
+            # Apply bias reduction to emotion prediction
+            if self.bias_reducer:
+                try:
+                    # Prepare emotion data for bias correction
+                    raw_emotion = {
+                        'emotion': fusion_result.get('dominant_emotion', 'neutral'),
+                        'confidence': fusion_result.get('dominant_emotion_confidence', 0.5),
+                        'all_scores': {}
+                    }
+
+                    # Extract all emotion scores
+                    for emotion_item in text_emotion.get('all_emotions', []):
+                        raw_emotion['all_scores'][emotion_item.get('label')] = emotion_item.get('score')
+
+                    # Apply bias reduction algorithms
+                    corrected_emotion = self.bias_reducer.apply_bias_reduction(
+                        text=chat_request.message,
+                        raw_prediction=raw_emotion
+                    )
+
+                    # Apply contextual correction
+                    corrected_emotion = self.bias_reducer.apply_contextual_correction(
+                        text=chat_request.message,
+                        emotion=corrected_emotion['emotion'],
+                        confidence=corrected_emotion['confidence']
+                    )
+
+                    # Apply ensemble correction if audio available
+                    if speech_emotion:
+                        corrected_emotion = self.bias_reducer.ensemble_correction(
+                            text=chat_request.message,
+                            text_emotion=corrected_emotion,
+                            audio_emotion=speech_emotion.get('primary_emotion')
+                        )
+
+                    # Update fusion result with corrected emotion
+                    fusion_result['dominant_emotion'] = corrected_emotion['emotion']
+                    fusion_result['dominant_emotion_confidence'] = corrected_emotion['confidence']
+                    fusion_result['bias_corrected'] = True
+
+                    # Log corrections if any were applied
+                    if corrected_emotion.get('corrected') or corrected_emotion.get('context_adjusted'):
+                        logger.info(f"Bias correction applied: {raw_emotion['emotion']} → {corrected_emotion['emotion']}")
+                        if corrected_emotion.get('corrections_applied'):
+                            logger.info(f"Corrections: {corrected_emotion['corrections_applied']}")
+
+                except Exception as e:
+                    logger.warning(f"Bias reduction failed, using original prediction: {e}")
 
             # Retrieve relevant context using RAG if enabled
             rag_context = None

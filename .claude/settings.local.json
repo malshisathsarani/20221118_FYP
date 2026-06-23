@@ -1,13 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python test_mom_whatsapp.py)",
-      "Bash(python update_emergency_contact.py)",
-      "Bash(grep -E \"\\.py$\")",
-      "Bash(flutter analyze)",
-      "Bash(python -m pylint app --disable=all --enable=E,W)",
-      "Bash(flutter analyze --no-pub)",
-      "Bash(cat pubspec.yaml)"
+      "Bash(pip3 list)"
     ],
     "deny": [],
     "ask": []
