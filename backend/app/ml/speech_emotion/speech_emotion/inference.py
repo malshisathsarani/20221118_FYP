@@ -59,7 +59,6 @@ class SpeechEmotionRecognizer:
 
             return features
         except Exception as e:
-            print(f"Error extracting features: {e}")
             return None
 
     def predict(self, audio_path):
@@ -98,6 +97,4 @@ if __name__ == "__main__":
 
     result = recognizer.predict('path/to/audio.wav')
     if result:
-        print(f"Emotion: {result['emotion']}")
-        print(f"Confidence: {result['confidence']*100:.2f}%")
-        print(f"All probabilities: {result['all_probabilities']}")
+        pass  # Example usage - see documentation for details

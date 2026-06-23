@@ -39,7 +39,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
       });
     } catch (e) {
-      // Error loading profile: $e
       setState(() => _loading = false);
     }
   }

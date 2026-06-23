@@ -95,12 +95,4 @@ if __name__ == "__main__":
 
     Run with: python -m app.ml.crisis_detection.train
     """
-    print("Crisis Detection Model Training")
-    print("=" * 50)
-    print("TODO: Implement training pipeline")
-    print("\nSteps:")
-    print("1. Download mental health dataset")
-    print("2. Preprocess and prepare data")
-    print("3. Fine-tune model")
-    print("4. Evaluate and save")
-    print("\nThis will be implemented in a later phase.")
+    pass  # Training pipeline placeholder - see train_crisis_model.py in scripts/ for implementation
