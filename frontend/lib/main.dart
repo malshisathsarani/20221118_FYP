@@ -9,6 +9,7 @@ import 'features/chat/screens/chat_screen.dart';
 import 'features/crisis/screens/crisis_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
 import 'features/tools/screens/tools_screen.dart';
+import 'features/about/screens/about_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -75,6 +76,7 @@ class MyApp extends StatelessWidget {
         '/crisis': (context) => const CrisisScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/tools': (context) => const ToolsScreen(),
+        '/about': (context) => const AboutScreen(),
       },
     );
   }

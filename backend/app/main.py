@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .core.database import engine, Base
-from .api.routes import auth, chat, crisis, audio, emergency_contact, artwork, game_tracking, emergency_alert
+from .api.routes import auth, chat, crisis, audio, emergency_contact, artwork, game_tracking, emergency_alert, users
 
 # Import all models to ensure they're registered with SQLAlchemy
 from .models import user, chat as chat_model, crisis as crisis_model, feedback, emergency_contact as emergency_contact_model, artwork as artwork_model, game_session
@@ -28,6 +28,7 @@ app.add_middleware(
 
 # Include routers with /api prefix
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(crisis.router, prefix="/api/crisis", tags=["Crisis"])
 app.include_router(audio.router, prefix="/api/audio", tags=["Audio"])

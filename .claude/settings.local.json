@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python test_mom_whatsapp.py)",
-      "Bash(python update_emergency_contact.py)"
+      "Bash(python update_emergency_contact.py)",
+      "Bash(grep -E \"\\.py$\")"
     ],
     "deny": [],
     "ask": []
