@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 
 import '../../../shared/presentation/widgets/custom_app_bar.dart';
 import '../../../shared/presentation/widgets/bottom_nav_bar.dart';
 import '../../../core/services/user_service.dart';
-import '../../../core/utils/storage_helper.dart';
 import '../../../core/constants/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -40,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
       });
     } catch (e) {
-      print('Error loading profile: $e');
+      // Error loading profile: $e
       setState(() => _loading = false);
     }
   }
@@ -170,9 +169,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 24),
 
             // Privacy & Security
-            Text(
+            const Text(
               'Privacy & Security',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
@@ -217,9 +216,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 24),
 
             // About
-            Text(
+            const Text(
               'About',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
@@ -429,25 +428,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildOldEmergencyContactsCard() {
-    return Card(
-      elevation: 0,
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.divider),
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.emergency_outlined, color: AppColors.error),
-        title: const Text('Emergency Contacts', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-        subtitle: const Text('Manage your crisis alert contacts', style: TextStyle(color: AppColors.textSecondary)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-        onTap: () {
-          Navigator.pushNamed(context, '/crisis');
-        },
-      ),
-    );
-  }
 
   Future<void> _exportUserData() async {
     // Show confirmation dialog first
@@ -483,6 +463,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (confirmed != true) return;
 
+    if (!mounted) return;
+
     try {
       // Show loading dialog
       showDialog(
@@ -508,7 +490,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Create download link and trigger download
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final anchor = html.AnchorElement(href: url)
+      html.AnchorElement(href: url)
         ..setAttribute('download', 'Serenity_Data_Export_$timestamp.html')
         ..click();
 
@@ -834,7 +816,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final isCrisis = chat['is_crisis'] == 1;
               final emotion = chat['detected_emotion'] ?? 'unknown';
               final date = chat['created_at']?.toString().split('T')[0] ?? 'N/A';
-              final time = chat['created_at']?.toString().split('T')[1]?.split('.')[0] ?? 'N/A';
+              final time = chat['created_at']?.toString().split('T')[1].split('.')[0] ?? 'N/A';
 
               return '''
               <div class="chat-item">
@@ -899,6 +881,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirmed == true) {
+      if (!mounted) return;
+
       try {
         // Show loading
         showDialog(

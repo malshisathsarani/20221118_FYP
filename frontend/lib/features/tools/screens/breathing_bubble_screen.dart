@@ -24,7 +24,6 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
 
   final GameTrackingService _gameTrackingService = GameTrackingService();
   GameSession? _currentSession;
-  DateTime? _sessionStartTime;
 
   @override
   void initState() {
@@ -112,7 +111,6 @@ class _BreathingBubbleScreenState extends State<BreathingBubbleScreen>
 
   Future<void> _startGameSession() async {
     try {
-      _sessionStartTime = DateTime.now();
       final session = await _gameTrackingService.startSession(
         GameSessionStart(
           gameType: 'breathing',

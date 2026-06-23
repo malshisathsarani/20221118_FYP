@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'dart:math' as math;
 import '../../../core/models/emergency_contact.dart';
 import '../../../core/constants/app_colors.dart';
 
@@ -15,14 +14,14 @@ class ModernCrisisDialog extends StatefulWidget {
   final int countdownSeconds;
 
   const ModernCrisisDialog({
-    Key? key,
+    super.key,
     required this.riskScore,
     required this.crisisReason,
     required this.contacts,
     this.onConfirm,
     this.onCancel,
     this.countdownSeconds = 30,
-  }) : super(key: key);
+  });
 
   @override
   State<ModernCrisisDialog> createState() => _ModernCrisisDialogState();
@@ -116,7 +115,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.check_circle_rounded,
@@ -139,7 +138,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                       Text(
                         'Notified ${_selectedContact?.name}',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 12,
                         ),
                       ),
@@ -185,7 +184,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
 
   Color _getCrisisColor(double riskScore) {
     if (riskScore >= 0.85) return AppColors.error; // Critical - use app error color
-    if (riskScore >= 0.70) return AppColors.error.withOpacity(0.85); // High
+    if (riskScore >= 0.70) return AppColors.error.withValues(alpha: 0.85); // High
     if (riskScore >= 0.45) return Colors.orange.shade600; // Moderate orange
     return AppColors.success; // Low - use app success color
   }
@@ -216,7 +215,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: crisisColor.withOpacity(0.3),
+                  color: crisisColor.withValues(alpha: 0.3),
                   blurRadius: 40,
                   spreadRadius: 0,
                   offset: const Offset(0, 20),
@@ -233,13 +232,13 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppColors.background.withOpacity(0.98),
-                        AppColors.surface.withOpacity(0.95),
+                        AppColors.background.withValues(alpha: 0.98),
+                        AppColors.surface.withValues(alpha: 0.95),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.2),
+                      color: AppColors.primary.withValues(alpha: 0.2),
                       width: 1.5,
                     ),
                   ),
@@ -303,7 +302,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
           end: Alignment.bottomRight,
           colors: [
             crisisColor,
-            crisisColor.withOpacity(0.8),
+            crisisColor.withValues(alpha: 0.8),
           ],
         ),
       ),
@@ -315,12 +314,12 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
@@ -352,9 +351,9 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
+              color: Colors.white.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
             ),
             child: Text(
               crisisLevel,
@@ -377,7 +376,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -413,19 +412,19 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            crisisColor.withOpacity(0.1),
-            crisisColor.withOpacity(0.05),
+            crisisColor.withValues(alpha: 0.1),
+            crisisColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: crisisColor.withOpacity(0.2), width: 1),
+        border: Border.all(color: crisisColor.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Risk Level',
                 style: TextStyle(
                   fontSize: 14,
@@ -462,7 +461,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.6),
+        color: AppColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -470,10 +469,10 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.info_outline_rounded,
               color: AppColors.primary,
               size: 20,
@@ -484,7 +483,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Detected Issue',
                   style: TextStyle(
                     fontSize: 12,
@@ -495,7 +494,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                 const SizedBox(height: 4),
                 Text(
                   widget.crisisReason,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textPrimary,
@@ -516,7 +515,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
         decoration: BoxDecoration(
           color: const Color(0xFFFEF3C7),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
+          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -540,7 +539,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Notify Emergency Contact',
           style: TextStyle(
             fontSize: 14,
@@ -556,7 +555,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
             border: Border.all(color: AppColors.divider),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -577,7 +576,7 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
                               AppColors.primary,
@@ -668,12 +667,12 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.12),
-            AppColors.secondary.withOpacity(0.08),
+            AppColors.primary.withValues(alpha: 0.12),
+            AppColors.secondary.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,14 +683,14 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.medical_services_rounded,
               color: AppColors.primary,
               size: 20,
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Text(
               'An emergency SMS will be sent with your location and crisis details. Your contact will be notified immediately.',
               style: TextStyle(
@@ -723,10 +722,10 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: AppColors.divider, width: 1.5),
+                side: const BorderSide(color: AppColors.divider, width: 1.5),
               ),
             ),
-            child: Text(
+            child: const Text(
               'CANCEL',
               style: TextStyle(
                 fontSize: 15,
@@ -770,9 +769,9 @@ class _ModernCrisisDialogState extends State<ModernCrisisDialog>
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : Row(
+                : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Icons.send_rounded, size: 20),
                       SizedBox(width: 8),
                       Text(

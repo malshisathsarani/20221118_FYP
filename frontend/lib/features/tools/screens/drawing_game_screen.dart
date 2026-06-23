@@ -30,7 +30,6 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
 
   final GameTrackingService _gameTrackingService = GameTrackingService();
   GameSession? _currentSession;
-  DateTime? _sessionStartTime;
 
   // Soft, calming pastel colors
   final List<ColorOption> availableColors = [
@@ -58,7 +57,6 @@ class _DrawingGameScreenState extends State<DrawingGameScreen>
 
   Future<void> _startGameSession() async {
     try {
-      _sessionStartTime = DateTime.now();
       final session = await _gameTrackingService.startSession(
         GameSessionStart(
           gameType: 'drawing',

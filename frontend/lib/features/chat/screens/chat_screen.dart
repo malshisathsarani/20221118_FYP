@@ -3,14 +3,12 @@ import '../../../shared/presentation/widgets/custom_app_bar.dart';
 import '../../../shared/presentation/widgets/safety_banner.dart';
 import '../../../core/services/chat_service.dart';
 import '../../../core/services/emergency_alert_service.dart';
-import '../../../core/services/location_service.dart';
 import '../../../core/models/chat_model.dart';
 import '../../../core/models/emergency_contact.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/storage_helper.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/audio_message_widget.dart';
-import '../dialogs/emergency_confirmation_dialog.dart';
 import '../dialogs/modern_crisis_dialog.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -29,7 +27,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   String? _sessionId;
   bool _isTyping = false;
   bool _showCrisisWarning = false;
-  String? _pendingAudioPath; // Store audio path for sending with message
 
   // Animation controllers
   AnimationController? _floatingController;
@@ -40,21 +37,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final List<ChatTheme> _themes = [
     ChatTheme(
       name: 'Soft Blue',
-      gradient: [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
-      userBubble: Color(0xFF42A5F5),
-      botBubble: Color(0xFFF1F8FF),
+      gradient: const [Color(0xFFBBDEFB), Color(0xFFE3F2FD)],
+      userBubble: const Color(0xFF42A5F5),
+      botBubble: const Color(0xFFF1F8FF),
     ),
     ChatTheme(
       name: 'Gentle Green',
-      gradient: [Color(0xFFC8E6C9), Color(0xFFE8F5E9)],
-      userBubble: Color(0xFF66BB6A),
-      botBubble: Color(0xFFF1F8F4),
+      gradient: const [Color(0xFFC8E6C9), Color(0xFFE8F5E9)],
+      userBubble: const Color(0xFF66BB6A),
+      botBubble: const Color(0xFFF1F8F4),
     ),
     ChatTheme(
       name: 'Soft Purple',
-      gradient: [Color(0xFFE1BEE7), Color(0xFFF3E5F5)],
-      userBubble: Color(0xFFAB47BC),
-      botBubble: Color(0xFFFAF4FB),
+      gradient: const [Color(0xFFE1BEE7), Color(0xFFF3E5F5)],
+      userBubble: const Color(0xFFAB47BC),
+      botBubble: const Color(0xFFFAF4FB),
     ),
   ];
 
@@ -118,8 +115,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             );
           }
         } catch (e) {
-          print('Failed to load chat history: $e');
           // If loading history fails, just show welcome message
+          // Error: $e
           _addMessage(
             text: 'Welcome back! How are you feeling?',
             isUser: false,
@@ -246,7 +243,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       setState(() {
         _isTyping = false;
         _showCrisisWarning = chatMessage.crisisDetection?.isCrisis ?? false;
-        _pendingAudioPath = null; // Clear pending audio
       });
 
       _addMessage(
@@ -335,7 +331,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final dialogResult = await showDialog<Map<String, dynamic>>(
         context: context,
         barrierDismissible: false, // Cannot dismiss by tapping outside
-        barrierColor: Colors.black.withOpacity(0.7), // Darker backdrop for modern look
+        barrierColor: Colors.black.withValues(alpha: 0.7), // Darker backdrop for modern look
         builder: (context) => ModernCrisisDialog(
           riskScore: crisis.crisisScore,
           crisisReason: crisis.indicators?.join(', ') ?? 'Crisis indicators detected',
@@ -411,12 +407,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
     } catch (e) {
-      print('Error showing emergency dialog: $e');
+      // Error showing emergency dialog: $e
       // Optionally show a fallback message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Unable to load emergency contacts. Please add contacts in settings.'),
+            content: const Text('Unable to load emergency contacts. Please add contacts in settings.'),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
@@ -798,7 +794,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: 8,
                       height: 8,
-                      transform: Matrix4.identity()..scale(scale),
+                      transform: Matrix4.diagonal3Values(scale, scale, 1.0),
                       decoration: BoxDecoration(
                         color: currentTheme.userBubble.withValues(alpha: 0.6),
                         shape: BoxShape.circle,

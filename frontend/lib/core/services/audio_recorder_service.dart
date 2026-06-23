@@ -56,14 +56,14 @@ class AudioRecorderService {
       if (!await hasPermission()) {
         final granted = await requestPermission();
         if (!granted) {
-          print('Microphone permission denied');
+          // Microphone permission denied
           return null;
         }
       }
 
       // Check if already recording
       if (_isRecording) {
-        print('Already recording');
+        // Already recording
         return _currentRecordingPath;
       }
 
@@ -94,10 +94,10 @@ class AudioRecorderService {
       _isRecording = true;
       _currentRecordingPath = path;
 
-      print('Recording started: $path');
+      // Recording started: $path
       return path;
     } catch (e) {
-      print('Error starting recording: $e');
+      // Error starting recording: $e
       return null;
     }
   }
@@ -108,17 +108,17 @@ class AudioRecorderService {
   Future<String?> stopRecording() async {
     try {
       if (!_isRecording) {
-        print('Not currently recording');
+        // Not currently recording
         return null;
       }
 
       final path = await _recorder.stop();
       _isRecording = false;
 
-      print('Recording stopped: $path');
+      // Recording stopped: $path
       return path;
     } catch (e) {
-      print('Error stopping recording: $e');
+      // Error stopping recording: $e
       _isRecording = false;
       return null;
     }
@@ -134,7 +134,7 @@ class AudioRecorderService {
 
       _currentRecordingPath = null;
     } catch (e) {
-      print('Error canceling recording: $e');
+      // Error canceling recording: $e
     }
   }
 
@@ -148,7 +148,7 @@ class AudioRecorderService {
       }
       return null;
     } catch (e) {
-      print('Error getting duration: $e');
+      // Error getting duration: $e
       return null;
     }
   }
